@@ -1,0 +1,317 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0d0b09;
+    font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;}
+  *{box-sizing:border-box;position:relative;}
+  #bg,#glow,#vig,#wall,#cap,#stage,#phone,#outro{position:absolute;}
+  #bg{inset:0;background:
+    radial-gradient(1200px 800px at 63% 50%, #241a10 0%, #14100c 55%, #0d0b09 100%);}
+  #vig{inset:0;box-shadow:inset 0 0 240px rgba(0,0,0,.55);}
+  svg{display:block}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="wall" style="inset:0"></div>
+<div id="cap" style="inset:0"></div>
+<div id="stage" style="inset:0"></div>
+<div id="glow"></div>
+<div id="phone" style="inset:0"></div>
+<div id="outro" style="inset:0"></div>
+<div id="vig"></div>
+<script>
+// ---------- palette (from src/constants/theme.ts dark) ----------
+const C={surface:'#151311',low:'#1D1B19',cont:'#221F1D',high:'#2C2927',highest:'#373431',
+  on:'#E9E2DC',onv:'#CFC6BD',pri:'#FFB870',onPri:'#4A2800',priC:'#6A3C00',onPriC:'#FFDCBE',
+  secC:'#4A3A2D',onSecC:'#F1E0D2',olv:'#4A4540'};
+
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const eo=t=>{t=clamp(t,0,1);return 1-Math.pow(1-t,3)};
+const ei=t=>{t=clamp(t,0,1);return t*t*t};
+const eio=t=>{t=clamp(t,0,1);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};
+const win=(t,a,b,f)=>eo((t-a)/f)*(1-eo((t-b+f)/f));   // 0→1→0
+const seg=(t,a,b)=>clamp((t-a)/(b-a),0,1);
+
+const T={
+  hook:[0,4.6], reveal:[4.6,9.2],
+  find:[9.2,21.6], math:[21.6,31.6], doc:[31.6,41.2], org:[41.2,51.6],
+  out:[51.6,60]
+};
+
+// ---------- svg icons ----------
+const I={
+  lock:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2.5" fill="${c}"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="${c}" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`,
+  plane:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${c}"><path d="M21.5 3.5 2.8 10.4c-.6.2-.6 1.1.1 1.3l6 1.8 1.8 6c.2.7 1.1.7 1.3.1l6.9-18.7c.2-.6-.6-1.1-1.4-.4z" transform="rotate(8 12 12)"/></svg>`,
+  batt:(s,c)=>`<svg width="${s}" height="${s*0.55}" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3.5" stroke="${c}" fill="none" stroke-width="1.4"/><rect x="3" y="3" width="17" height="7" rx="1.8" fill="${c}"/><rect x="23.8" y="4" width="2" height="5" rx="1" fill="${c}"/></svg>`,
+  menu:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24"><path d="M4 6.5h16M4 12h16M4 17.5h16" stroke="${c}" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`,
+  send:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${c}"><path d="M12 19V6M6 12l6-6 6 6" stroke="${c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
+  check:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  chkbox:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="${c}"/><path d="M8 12.4l2.7 2.7L16.4 9" stroke="${C.onPri}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
+  move:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M4 7h9M4 12h9M4 17h7" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M15 10l4 4-4 4" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(1 1)"/></svg>`,
+  edit:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${c}"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1z"/></svg>`,
+  doc:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24"><path d="M6 3h8l5 5v12a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 20V4.5A1.5 1.5 0 0 1 6.5 3z" fill="${c}" transform="translate(-0.5 0.5)"/><path d="M14 3v5h5" fill="rgba(255,255,255,.35)"/></svg>`,
+  spin:(s,c,p)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" style="transform:rotate(${p*360}deg)"><circle cx="12" cy="12" r="9" stroke="${C.highest}" stroke-width="2.6" fill="none"/><path d="M21 12a9 9 0 0 0-9-9" stroke="${c}" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>`,
+};
+
+// ---------- thumbnails ----------
+const lines=(n,w='70%')=>Array.from({length:n},(_,i)=>`<div style="height:3px;border-radius:2px;background:#b9b2a9;width:${i==n-1?'42%':(i%3==0?'82%':w)};margin:4px 0"></div>`).join('');
+const receipt=(brand,bc,amt,sub)=>`<div style="width:100%;height:100%;background:#efe9e0;border-radius:6px;overflow:hidden;display:flex;flex-direction:column">
+  <div style="background:${bc};color:#fff;font-size:9px;font-weight:700;letter-spacing:.6px;padding:5px 8px">${brand}</div>
+  <div style="flex:1;padding:6px 8px 2px">${lines(3)}</div>
+  <div style="padding:0 8px 7px;font-size:11px;font-weight:700;color:#2c2620">${amt}<span style="font-weight:400;font-size:8px;color:#8d857b;margin-left:6px">${sub}</span></div></div>`;
+const pdf=(title,hi)=>`<div style="width:100%;height:100%;background:#f4efe8;border-radius:6px;padding:10px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px"><div style="background:#B3261E;color:#fff;font-size:7px;font-weight:800;border-radius:3px;padding:2px 5px;letter-spacing:.5px">PDF</div><div style="font-size:8.5px;font-weight:700;color:#4a443c">${title}</div></div>
+  <div style="font-size:8px;color:#7d766b;line-height:1.9">Defense window: <span style="background:rgba(255,184,112,.75);color:#3a2400;border-radius:2px;padding:0 2px">${hi}</span><br>Room 402, Engineering Bldg.<br>Panel: Dr. Reyes, Dr. Uy</div></div>`;
+const docPlain=(tag)=>`<div style="width:100%;height:100%;background:#f4efe8;border-radius:6px;padding:10px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px"><div style="background:#3a5f8a;color:#fff;font-size:7px;font-weight:800;border-radius:3px;padding:2px 5px;letter-spacing:.5px">${tag}</div></div>${lines(4,'88%')}</div>`;
+const photo=(g1,g2,sun)=>`<div style="width:100%;height:100%;border-radius:6px;background:linear-gradient(180deg,${g1},${g2});overflow:hidden">${sun?`<div style="width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,#fff3d6,#ffc46b);margin:14px auto 0;box-shadow:0 0 18px #ffc46b"></div>`:''}</div>`;
+
+// ---------- phone ui builders ----------
+function statusbar(){return `<div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 18px 0 22px;flex:none">
+  <div style="font-size:12.5px;font-weight:600;color:${C.on};letter-spacing:.4px">9:41</div>
+  <div style="display:flex;align-items:center;gap:6px">${I.plane(13,C.onv)}${I.batt(24,C.on)}</div></div>`}
+function appbar(){return `<div style="height:52px;display:flex;align-items:center;gap:14px;padding:0 14px;flex:none">
+  ${I.menu(22,C.onv)}<div style="font-size:18px;font-weight:500;color:${C.on};flex:1">AiFoundIt</div>${I.edit(20,C.pri)}</div>`}
+function composer(typed,caret,sendP){const send=sendP>0;
+  return `<div style="flex:none;padding:10px 14px 16px"><div style="display:flex;align-items:center;gap:10px;background:${C.cont};border-radius:26px;padding:6px 6px 6px 18px;min-height:52px">
+  <div style="flex:1;font-size:15px;color:${typed?C.on:C.onv};line-height:1.35">${typed||'Describe a file'}${caret?`<span style="display:inline-block;width:2px;height:17px;background:${C.pri};vertical-align:-3px;margin-left:1px"></span>`:''}</div>
+  <div style="width:42px;height:42px;border-radius:21px;background:${send?C.pri:C.high};display:flex;align-items:center;justify-content:center;transform:scale(${send?0.9+0.1*sendP:1})">${I.send(18,send?C.onPri:C.onv)}</div></div></div>`}
+function bubble(txt,p){return `<div style="align-self:flex-end;max-width:84%;background:${C.high};color:${C.on};font-size:15px;line-height:1.45;border-radius:20px;border-bottom-right-radius:5px;padding:10px 15px;opacity:${p};transform:translateY(${(1-p)*14}px) scale(${0.92+0.08*p});transform-origin:bottom right">${txt}</div>`}
+function searching(t,p,prog,secs){const files=Math.round(eio(clamp(prog||0,0,1))*3912);
+  const el=(eio(clamp(prog||0,0,1))*(secs||0.4)).toFixed(2);
+  return `<div style="display:flex;align-items:center;gap:10px;opacity:${p};height:34px">${I.spin(16,C.pri,t*4)}<span style="font-size:13.5px;color:${C.onv}">Searching this phone…</span>
+  <span style="flex:1"></span><span style="font-size:12px;color:${C.pri};font-variant-numeric:tabular-nums;letter-spacing:.4px">${files.toLocaleString()} files · ${el} s</span></div>`}
+function fcard(th,name,meta,p,tag){return `<div style="flex:1;background:${C.surface};border:1px solid ${C.olv};border-radius:14px;overflow:hidden;opacity:${p};transform:translateY(${(1-p)*22}px) scale(${0.9+0.1*p})">
+  <div style="height:96px;padding:8px;position:relative">${th}${tag?`<div style="position:absolute;top:4px;left:4px;background:rgba(255,184,112,.92);color:${C.onPri};font-size:8.5px;font-weight:700;letter-spacing:.5px;border-radius:5px;padding:2px 6px;text-transform:uppercase">${tag}</div>`:''}</div>
+  <div style="padding:0 9px 9px"><div style="font-size:12px;font-weight:600;color:${C.on};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+  <div style="font-size:10.5px;color:${C.onv};margin-top:2px">${meta}</div></div></div>`}
+function cardgrid(cards){const rows=[];for(let i=0;i<cards.length;i+=2)rows.push(cards.slice(i,i+2));
+  return `<div style="display:flex;flex-direction:column;gap:10px">${rows.map(r=>`<div style="display:flex;gap:10px">${r.map(c=>fcard(c.th,c.name,c.meta,c.p,c.tag)).join('')}${r.length==1?'<div style="flex:1"></div>':''}</div>`).join('')}</div>`}
+function answer(txt,p){return `<div style="font-size:15px;line-height:1.5;color:${C.on};opacity:${p};transform:translateY(${(1-p)*10}px)">${txt}</div>`}
+function proof(txt,p){return `<div style="display:flex;align-items:center;gap:6px;opacity:${p}">${I.lock(12,C.onv)}<span style="font-size:11.5px;color:${C.onv};letter-spacing:.2px">${txt}</span></div>`}
+function totalCard(amt,sub,p){return `<div style="background:${C.priC};border-radius:16px;padding:14px 16px;opacity:${p};transform:translateY(${(1-p)*18}px) scale(${0.94+0.06*p})">
+  <div style="font-size:26px;font-weight:500;color:${C.onPriC}">${amt}</div>
+  <div style="font-size:12.5px;color:${C.onPriC};opacity:.9;margin-top:2px">${sub}</div></div>`}
+function miniRow(name,amt,p){return `<div style="display:flex;align-items:center;gap:9px;opacity:${p};transform:translateX(${(1-p)*-12}px)">
+  <div style="width:22px;height:22px;border-radius:6px;background:${C.secC};display:flex;align-items:center;justify-content:center">${I.doc(12,C.onSecC)}</div>
+  <div style="flex:1;font-size:12.5px;color:${C.onv};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+  <div style="font-size:12.5px;font-weight:600;color:${C.on}">${amt}</div></div>`}
+function planCard(state,p,press){const done=state==='moved';
+  return `<div style="background:${C.low};border:1px solid ${C.olv};border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;opacity:${p};transform:translateY(${(1-p)*20}px)">
+  <div style="display:flex;gap:10px;align-items:flex-start"><span style="margin-top:1px">${I.move(19,C.pri)}</span><div style="flex:1;font-size:14.5px;font-weight:500;color:${C.on};line-height:1.4">Move 6 of 6 files to Receipts?</div></div>
+  <div style="margin-left:29px;display:flex;flex-direction:column;gap:6px">
+    ${['Screenshot_20261009_184522.png','Screenshot_20261008_121007.png','Screenshot_20261007_093311.png','Screenshot_20261005_201144.png'].map(n=>`<div style="display:flex;align-items:center;gap:8px">${I.chkbox(17,C.pri)}<span style="font-size:12.5px;color:${C.onv};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n}</span></div>`).join('')}
+    <div style="font-size:12px;color:${C.onv}">and 2 more</div></div>
+  ${done?`<div style="display:flex;align-items:center;gap:9px">${'<span style="width:20px;height:20px;border-radius:50%;background:'+C.pri+';display:flex;align-items:center;justify-content:center">'+I.check(13,C.onPri)+'</span>'}<span style="font-size:13.5px;color:${C.on}">Moved 6 files to Receipts.</span></div>`
+  :`<div style="font-size:11.5px;color:${C.onv}">Nothing is deleted. You can undo the move.</div>
+    <div style="display:flex;justify-content:flex-end;gap:8px"><div style="padding:9px 14px;font-size:13.5px;font-weight:500;color:${C.pri}">Cancel</div>
+    <div style="padding:9px 18px;font-size:13.5px;font-weight:600;color:${C.onPri};background:${C.pri};border-radius:20px;transform:scale(${press})">Move 6 files</div></div>`}</div>`}
+function snackbar(p){return `<div style="position:absolute;left:14px;right:14px;bottom:78px;background:${C.highest};border-radius:12px;padding:12px 16px;display:flex;align-items:center;opacity:${p};transform:translateY(${(1-p)*14}px)">
+  <span style="flex:1;font-size:13px;color:${C.on}">Moved 6 files to Receipts</span><span style="font-size:13px;font-weight:600;color:${C.pri}">Undo</span></div>`}
+function suggestions(tapIdx,tapP,p){const items=[
+  ['doc','The screenshot with the wifi password'],['rc','Nasaan yung resibo ko sa Jollibee?'],
+  ['doc','The PDF about the thesis defense schedule'],['ph','beach photo'],
+  ['rc','Magkano nagastos ko sa GCash this week?'],['mv','Ilagay mo lahat ng resibo sa isang folder']];
+  const ic={doc:I.doc(15,C.onv),rc:`<span style="width:15px;height:15px;display:inline-block">${I.doc(15,C.onv)}</span>`,ph:`<span style="width:15px;height:15px;border-radius:4px;background:${C.secC};display:inline-block"></span>`,mv:I.move(15,C.onv)};
+  return `<div style="opacity:${p}"><div style="font-size:22px;color:${C.on};margin:14px 0 4px">What are you looking for?</div>
+  <div style="font-size:13.5px;color:${C.onv};margin-bottom:16px">Describe it the way you’d remember it.</div>
+  <div style="display:flex;flex-direction:column;gap:8px">${items.map((s,i)=>`<div style="display:flex;align-items:center;gap:12px;border:1px solid ${i===tapIdx?C.pri:C.olv};border-radius:12px;padding:11px 14px;min-height:48px;background:${i===tapIdx?'rgba(255,184,112,.08)':'transparent'};transform:scale(${i===tapIdx?1-0.04*tapP:1})"><span>${ic[s[0]]}</span><span style="font-size:14px;color:${C.on}">${s[1]}</span></div>`).join('')}</div></div>`}
+function glance(){const t=[['23','Receipts'],['4','IDs'],['31','School'],['88','Screenshots']];
+  return `<div style="margin:12px 0 4px"><div style="font-size:13px;font-weight:500;color:${C.onv};margin-bottom:8px">At a glance</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">${t.map(x=>`<div style="border:1px solid ${C.olv};border-radius:12px;padding:9px 14px"><div style="font-size:15px;font-weight:500;color:${C.on}">${x[0]}</div><div style="font-size:10.5px;color:${C.onv}">${x[1]}</div></div>`).join('')}</div></div>`}
+
+// phone shell: content layers absolutely stacked in chat area
+function phoneHTML(layers,comp,snack){return `
+<div style="width:472px;height:972px;border-radius:46px;background:#000;padding:11px;box-shadow:0 30px 90px rgba(0,0,0,.65),0 0 0 1px #3a332c">
+  <div style="width:450px;height:950px;border-radius:36px;overflow:hidden;background:${C.surface};display:flex;flex-direction:column;position:relative">
+    ${statusbar()}${appbar()}
+    <div style="flex:1;position:relative;overflow:hidden">${layers}</div>
+    ${comp}${snack||''}
+    <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:#000"></div>
+  </div></div>`}
+const layer=(p,inner,dy)=>`<div style="position:absolute;inset:0;padding:8px 16px;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;overflow:hidden;opacity:${p};transform:translateY(${dy||0}px)">${inner}</div>`;
+
+// ---------- typing beat helper ----------
+function typed(query,s,typeStart,cps){const n=Math.floor((s-typeStart)*cps);
+  if(s<typeStart)return['',true];const done=n>=query.length;
+  return[query.slice(0,clamp(n,0,query.length)),!done]}
+
+// ---------- per-beat chat content ----------
+function chatFind(t,s,P){
+  const tapT=1.4,bubT=2.2,srchT=2.7,cardT=4.0,ansT=5.5,prfT=6.2;
+  if(s<bubT)return{html:suggestions(1,eo(seg(s,tapT-0.15,tapT+0.3)),s<tapT+0.5?1:1-eo(seg(s,tapT+0.35,bubT))),comp:['',false,0]};
+  const cards=[
+    {th:receipt('GCash · Pay QR','#0B5FFF','₱345.00','Jollibee – SM Makati'),name:'Screenshot_20261008_121007.png',meta:'Oct 8 · Screenshots',p:eo(seg(s,cardT,cardT+.5)),tag:'semantic match'},
+    {th:receipt('JOLLIBEE','#C8102E','₱202.00','Order #4582'),name:'Screenshot_20260928_115520.png',meta:'Sep 28 · Screenshots',p:eo(seg(s,cardT+.25,cardT+.75)),tag:'semantic match'},
+    {th:receipt('Maya','#00A651','₱189.75','7-Eleven 2291'),name:'Screenshot_20261007_093311.png',meta:'Oct 7 · Screenshots',p:eo(seg(s,cardT+.5,cardT+1))},
+    {th:receipt("McDonald's",'#DA291C','₱292.00','Delivery'),name:'Screenshot_20260920_174030.png',meta:'Sep 20 · Screenshots',p:eo(seg(s,cardT+.75,cardT+1.25))}];
+  return{html:`${bubble('Nasaan yung resibo ko sa Jollibee?',eo(seg(s,bubT,bubT+.35)))}
+    ${s<cardT+0.3?searching(s,win(s,srchT,cardT+0.3,.25),seg(s,srchT,cardT),0.4):''}${cardgrid(cards)}
+    ${answer('2 receipts from Jollibee — the latest is a ₱345.00 GCash payment at SM Makati on Oct 8.',seg(s,ansT,ansT+.6))}
+    ${proof('Found in 0.4 s · on-device · 0 bytes sent',seg(s,prfT,prfT+.5))}`,comp:['',false,1]};
+}
+function chatTyped(t,s,P,cfg){
+  const{q,cps,searchMs,body,ans,prf}=cfg;
+  const ts=0.55,sendT=ts+q.length/cps+0.3,srchT=sendT+0.4,cardT=srchT+searchMs,ansT=cardT+cfg.cardHold,prfT=ansT+0.75;
+  if(s<sendT){const[txt,caret]=typed(q,s,ts,cps);
+    return{html:`<div style="flex:1"></div>`,comp:[txt,caret&&Math.floor(s*3)%2==0,txt?1:0]};
+  }
+  const sendP=s<sendT+0.35?eo(seg(s,sendT,sendT+0.3)):1;
+  return{html:`${bubble(q,eo(seg(s,sendT,sendT+.3)))}
+    ${s<cardT+0.3?searching(s,win(s,srchT,cardT+0.3,.25),seg(s,srchT,cardT),cfg.secs||0.4):''}${body(s,cardT)}
+    ${ans?answer(ans,seg(s,ansT,ansT+.6)):''}${proof(prf||'Found in 0.4 s · on-device · 0 bytes sent',seg(s,prfT,prfT+.5))}`,
+    comp:['',false,1],sendP};
+}
+function bodyMath(s,cardT){
+  const rows=[['Screenshot_20261009_184522.png','₱1,250.00'],['Screenshot_20261008_121007.png','₱345.00'],['Screenshot_20261005_201144.png','₱500.00']];
+  return `<div style="display:flex;flex-direction:column;gap:9px;background:${C.low};border:1px solid ${C.olv};border-radius:16px;padding:13px 15px;opacity:${seg(s,cardT,cardT+.5)};transform:translateY(${(1-seg(s,cardT,cardT+.5))*16}px)">
+    ${rows.map((r,i)=>miniRow(r[0],r[1],seg(s,cardT+0.15+i*0.22,cardT+0.55+i*0.22))).join('')}</div>
+  ${totalCard('₱2,095.00','3 receipts · GCash · summed in code',seg(s,cardT+0.9,cardT+1.5))}`;
+}
+function bodyDoc(s,cardT){
+  const cards=[
+    {th:pdf('Thesis Defense Schedule','thesis defense schedule'),name:'Thesis_Defense_Schedule.pdf',meta:'Sep 10 · Documents/School',p:eo(seg(s,cardT,cardT+.5))},
+    {th:docPlain('PDF'),name:'Enrollment_Form_1stSem.pdf',meta:'Aug 26 · Documents/School',p:eo(seg(s,cardT+.25,cardT+.75))}];
+  return cardgrid(cards);
+}
+function bodyOrg(s,cardT){
+  const pressT=cardT+1.9,doneT=pressT+0.4;
+  const press=s>pressT-0.12&&s<doneT?1-eio(seg(s,pressT-0.12,doneT))*0.12:1;
+  const moved=s>=doneT;
+  return planCard(moved?'moved':'pending',seg(s,cardT,cardT+.6),press);
+}
+const ORG_SNACK_AT=6.55; // scene-local: right after the move lands
+
+// ---------- embedding-space visual (find beat) ----------
+const EMB_DOTS=[];
+for(let i=0;i<110;i++){const cl=i%5;
+  EMB_DOTS.push({x:[20,48,76,30,62][cl]+(((i*37)%17)-8)*1.1,y:[62,30,44,74,55][cl]+(((i*53)%17)-8)*1.05,hot:cl===1});}
+function embedViz(t){const s=t-T.find[0];const p=win(s,2.7,5.3,0.4);if(p<=0)return'';
+  const act=eio(seg(s,3.0,3.9));
+  let dots='';
+  for(const d of EMB_DOTS){
+    const op=d.hot?0.28+0.72*act:0.45-0.28*act;
+    const sz=d.hot?4.5+3*act:4;
+    dots+=`<div style="position:absolute;left:${d.x}%;top:${d.y}%;width:${sz}px;height:${sz}px;border-radius:50%;background:${d.hot?C.pri:'#6a6157'};opacity:${op};${d.hot?`box-shadow:0 0 ${10*act}px ${C.pri}`:''}"></div>`;
+  }
+  const q=eio(seg(s,2.85,3.6));
+  const qx=48-30*(1-q),qy=30+34*(1-q);
+  return `<div style="position:absolute;left:120px;top:66%;width:520px;height:190px;opacity:${p}">
+    <div style="position:absolute;inset:0">${dots}
+      <div style="position:absolute;left:${qx}%;top:${qy}%;width:26px;height:26px;border:2px solid ${C.pri};border-radius:50%;opacity:${seg(s,2.85,3.3)};transform:translate(-50%,-50%) scale(${1.7-0.7*q})"></div></div>
+    <div style="position:absolute;bottom:-30px;left:0;font-size:15px;color:${C.onv};letter-spacing:.3px">vector search — every file embedded, found by <span style="color:${C.pri}">meaning</span></div></div>`}
+
+// ---------- captions ----------
+const captions={
+  find:['Ask the way you’d remember it.','English or Taglish — it understands both.'],
+  math:['Receipt math, summed in code.','The AI never guesses a number.'],
+  doc:['It reads what’s inside.','Pages, words and photos — not just filenames.'],
+  org:['It organizes, too.','You approve every move. Undo stays.']};
+function capHTML(key,t){const[a,b]=T[key];const s=t-a;
+  const p=win(s,0.2,b-a-0.4,0.5);if(p<=0)return'';
+  const[c1,c2]=captions[key];
+  const p2=seg(s,1.6,2.3);
+  return `<div style="position:absolute;left:120px;top:50%;transform:translateY(-58%) translateX(${(1-p)*30}px);width:600px;opacity:${p}">
+  <div style="font-size:52px;font-weight:600;color:${C.on};line-height:1.15;letter-spacing:-.5px">${c1}</div>
+  <div style="font-size:23px;color:${C.pri};margin-top:18px;opacity:${p2};transform:translateX(${(1-p2)*20}px)">${c2}</div></div>`}
+
+// ---------- hook ----------
+function hook(t){const[a,b]=T.hook;const s=t-a;const p=win(s,0,b-a,.4);if(p<=0)return'';
+  const names=['Screenshot_20261009_184522.png','Meralco_Bill_Oct2026.pdf','IMG_20260920_beach.jpg','GCash ₱1,250 receipt','Payslip_September2026.pdf','IMG_20261001_dog.jpg','Voice_memo_grocery.m4a','Lease_agreement_2026.pdf','Screenshot_20260920_174030.png','Thesis_Defense_Schedule.pdf','VID_20260815_candles.mp4','PLDT_Bill_Oct2026.pdf','IMG_20260815_birthday.jpg','UMID_photo.jpg','Screenshot_meme.jpg','Gcash_Statement_Sept2026.pdf','Calculus_notes.txt','Passport_scan.pdf','Screenshot_20260314_201145.png','IMG_20261005_ramen.jpg'];
+  const ITEM=56;
+  const col=(x,off)=>`<div style="position:absolute;top:-60px;left:${x}px;width:520px;display:flex;flex-direction:column;gap:12px;transform:translateY(${-((s*430+off)%(names.length*ITEM))}px)">
+    ${names.concat(names,names).map(n=>`<div style="display:flex;align-items:center;gap:11px;border:1px solid ${C.olv};border-radius:10px;height:44px;padding:0 14px;background:rgba(29,27,25,.7)">${I.doc(14,'#6a6157')}<span style="font-size:15px;color:#8f877d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n}</span></div>`).join('')}</div>`;
+  const c1=seg(s,0.35,1.0),c2=seg(s,1.9,2.5);
+  return `<div style="position:absolute;inset:0;opacity:${p}">
+    <div style="position:absolute;inset:0;opacity:.5;filter:blur(1.5px)">${col(150,0)}${col(1240,300)}</div>
+    <div style="position:absolute;inset:0;background:radial-gradient(900px 560px at 50% 50%, rgba(13,11,9,.86), rgba(13,11,9,.45) 70%, rgba(13,11,9,.15))"></div>
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div style="font-size:66px;font-weight:650;color:${C.on};letter-spacing:-1px;opacity:${c1};transform:translateY(${(1-c1)*26}px)">3,912 files on this phone.</div>
+      <div style="font-size:30px;color:${C.pri};margin-top:22px;opacity:${c2};transform:translateY(${(1-c2)*22}px)">One of them is a receipt from Jollibee.</div>
+    </div></div>`}
+
+// ---------- reveal ----------
+function reveal(t){const[a,b]=T.reveal;const s=t-a;const p=win(s,0,b-a,.5);if(p<=0)return'';
+  const b1=seg(s,.2,.8),b2=seg(s,.7,1.3),b3=seg(s,1.3,1.9),b4=seg(s,2.1,2.7);
+  return `<div style="position:absolute;inset:0;opacity:${p};display:flex;flex-direction:column;align-items:center;justify-content:center">
+    <div style="width:104px;height:104px;border-radius:28px;overflow:hidden;opacity:${b1};transform:scale(${0.7+0.3*b1});box-shadow:0 12px 40px rgba(0,0,0,.5)"><img src="../../assets/images/icon.png" style="width:104px;height:104px;display:block"></div>
+    <div style="font-size:76px;font-weight:650;color:${C.on};letter-spacing:-1.5px;margin-top:30px;opacity:${b2};transform:translateY(${(1-b2)*24}px)">AiFoundIt</div>
+    <div style="font-size:31px;color:${C.on};opacity:${b3};margin-top:16px;transform:translateY(${(1-b3)*18}px)">Find any file by describing it.</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:34px;opacity:${b4}"><span style="opacity:.9">${I.plane(19,C.pri)}</span><span style="font-size:19px;color:${C.onv}">Nothing is uploaded. It works in airplane mode.</span></div></div>`}
+
+// ---------- outro ----------
+function outro(t){const[a,b]=T.out;const s=t-a;const p=eo(seg(s,0,.6));if(p<=0)return'';
+  const b1=seg(s,.4,1.0),b2=seg(s,1.4,2.0),b3=seg(s,5.6,6.2);
+  const chips=['on-device','0 bytes sent','English · Taglish'];
+  return `<div style="position:absolute;inset:0;opacity:${p};display:flex;flex-direction:column;align-items:center;justify-content:center">
+    <div style="position:absolute;inset:0;background:radial-gradient(1000px 640px at 50% 52%, rgba(13,11,9,.9), rgba(13,11,9,.6) 70%, rgba(13,11,9,.2))"></div>
+    <div style="font-size:56px;font-weight:620;color:${C.on};letter-spacing:-1px;opacity:${b1};transform:translateY(${(1-b1)*24}px)">Your files never leave this phone.</div>
+    <div style="display:flex;gap:14px;margin-top:34px;opacity:${b2}">${chips.map((c,i)=>`<div style="border:1px solid ${C.olv};border-radius:22px;padding:9px 20px;font-size:19px;color:${C.pri};background:rgba(255,184,112,.06);opacity:${seg(s,1.5+i*0.3,2.0+i*0.3)};transform:translateY(${(1-seg(s,1.5+i*0.3,2.0+i*0.3))*14}px)">${c}</div>`).join('')}</div>
+    <div style="margin-top:52px;display:flex;align-items:center;gap:18px;opacity:${b3};transform:translateY(${(1-b3)*18}px)">
+      <img src="../../assets/images/icon.png" style="width:58px;height:58px;border-radius:16px;display:block">
+      <div><div style="font-size:34px;font-weight:650;color:${C.on};line-height:1.1">AiFoundIt</div>
+      <div style="font-size:15px;color:${C.onv};margin-top:6px;letter-spacing:2.5px;text-transform:uppercase">AppBuildersPH 2026 · Local AI</div></div></div></div>`}
+
+// ---------- master render ----------
+function render(t){
+  // background glow drifts toward phone
+  const gx=63+Math.sin(t*0.25)*1.2;
+  document.getElementById('bg').style.background=
+    `radial-gradient(1200px 800px at ${gx}% ${50+Math.sin(t*0.18)*2}%, #241a10 0%, #14100c 55%, #0d0b09 100%)`;
+
+  // hook
+  const hv=document.getElementById('wall');
+  hv.innerHTML=hook(t);
+
+  // stage = reveal (centered typography)
+  const st=document.getElementById('stage');
+  st.innerHTML=reveal(t)+outro(t);
+
+  // left captions
+  let cap='';
+  for(const k of ['find','math','doc','org'])cap+=capHTML(k,t);
+  cap+=embedViz(t);
+  document.getElementById('cap').innerHTML=cap;
+
+  // phone: visible during demo beats (+ slightly into outro)
+  const ph=document.getElementById('phone');
+  const phIn=eo(seg(t,T.find[0]-0.15,T.find[0]+0.7));
+  const phOut=1-eo(seg(t,T.out[0]+0.4,T.out[0]+1.6));
+  const phP=phIn*phOut;
+  if(phP<=0){ph.innerHTML='';}
+  else{
+    const bobY=Math.sin(t*0.7)*4, tilt=Math.sin(t*0.5)*0.4;
+    const drift=t<T.find[0]+0.7?(1-phIn)*60:0;
+    // chat layers
+    let layers='',comp=['',false,0],snack='';
+    const beats=[['find',chatFind]];
+    // find
+    let s=t-T.find[0],P=win(s,0.05,T.find[1]-T.find[0]-0.05,0.45);
+    if(P>0){const r=chatFind(t,s,P);layers+=layer(P,r.html,(1-P)*26);if(P>0.5)comp=r.comp;}
+    // math
+    s=t-T.math[0];P=win(s,0.05,T.math[1]-T.math[0]-0.05,0.45);
+    if(P>0){const r=chatTyped(t,s,P,{q:'Magkano nagastos ko sa GCash this week?',cps:23,searchMs:0.95,cardHold:1.8,secs:0.5,body:bodyMath,ans:'You spent ₱2,095.00 on GCash this week across 3 receipts.',prf:'Found in 0.5 s · on-device · 0 bytes sent'});layers+=layer(P,r.html,(1-P)*26);if(P>0.5)comp=r.comp;}
+    // doc
+    s=t-T.doc[0];P=win(s,0.05,T.doc[1]-T.doc[0]-0.05,0.45);
+    if(P>0){const r=chatTyped(t,s,P,{q:'The PDF about the thesis defense schedule',cps:23,searchMs:0.95,cardHold:1.5,body:bodyDoc,ans:'Thesis_Defense_Schedule.pdf — defense window October 17–24, Room 402.',prf:'Found in 0.4 s · on-device · 0 bytes sent'});layers+=layer(P,r.html,(1-P)*26);if(P>0.5)comp=r.comp;}
+    // org
+    s=t-T.org[0];P=win(s,0.05,T.org[1]-T.org[0]-0.05,0.45);
+    if(P>0){const r=chatTyped(t,s,P,{q:'Ilagay mo lahat ng resibo sa isang folder',cps:23,searchMs:0.95,cardHold:2.7,body:bodyOrg,ans:null,prf:'Done · on-device · 0 bytes sent'});
+      layers+=layer(P,r.html,(1-P)*26);if(P>0.5)comp=r.comp;
+      const snP=seg(s,ORG_SNACK_AT,ORG_SNACK_AT+0.45);
+      if(snP>0&&P>0.5)snack=snackbar(Math.min(snP,P));
+    }
+    ph.innerHTML=`<div style="position:absolute;left:1070px;top:50%;transform:translateY(calc(-50% + ${bobY+drift}px)) rotate(${tilt}deg);opacity:${phP}">${phoneHTML(layers,composer(comp[0],comp[1],comp[2]||0),snack)}</div>`;
+  }
+  // soften phone behind outro
+  if(t>T.out[0])ph.style.filter=`brightness(${1-0.55*eo(seg(t,T.out[0]+0.4,T.out[0]+1.4))}) blur(${2*eo(seg(t,T.out[0]+0.4,T.out[0]+1.4))}px)`;
+  else ph.style.filter='';
+}
+window.render=render;
+render(0);
+</script>
+</body>
+</html>
