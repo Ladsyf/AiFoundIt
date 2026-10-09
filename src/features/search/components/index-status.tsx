@@ -6,13 +6,23 @@ import { Spacing } from '@/constants/theme';
 
 const number = new Intl.NumberFormat('en-GB');
 
-export function IndexStatus({ indexed, total }: { indexed: number; total: number }) {
-  const label = `Indexing files on this phone · ${number.format(indexed)} of ${number.format(total)}`;
+type Props = {
+  indexed: number;
+  total: number;
+  backend?: string;
+};
+
+export function IndexStatus({ indexed, total, backend }: Props) {
+  const label =
+    total > 0
+      ? `Indexing files on this phone · ${number.format(indexed)} of ${number.format(total)}`
+      : 'Indexing files on this phone…';
   return (
     <View style={styles.container}>
-      <LinearProgress value={indexed / total} label={label} />
+      <LinearProgress value={total > 0 ? indexed / total : 0} label={label} />
       <Text variant="bodySmall" color="onSurfaceVariant" importantForAccessibility="no">
         {label}
+        {backend ? ` · ${backend}` : ''}
       </Text>
     </View>
   );

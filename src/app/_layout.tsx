@@ -59,6 +59,7 @@ export default function RootLayout() {
               },
             }}>
             <Drawer.Screen name="index" />
+            <Drawer.Screen name="settings" />
           </Drawer>
         </SearchProvider>
       </ThemeProvider>

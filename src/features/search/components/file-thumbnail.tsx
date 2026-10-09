@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
@@ -5,11 +6,26 @@ import { Text } from '@/components/ui/text';
 import { Radius, Spacing } from '@/constants/theme';
 import type { FilePreview } from '@/features/search/types';
 import { useTheme } from '@/hooks/use-theme';
+import { formatDuration } from '@/lib/format';
 
 type Props = {
   preview: FilePreview;
   large?: boolean;
 };
+
+function fileUri(path: string) {
+  return path.startsWith('content:') || path.startsWith('file:') ? path : `file://${path}`;
+}
+
+function TimeChip({ ms }: { ms: number }) {
+  return (
+    <View style={styles.timeChip}>
+      <Text variant="labelMedium" style={styles.timeChipText}>
+        {formatDuration(ms)}
+      </Text>
+    </View>
+  );
+}
 
 export function FileThumbnail({ preview, large }: Props) {
   const theme = useTheme();
@@ -19,6 +35,54 @@ export function FileThumbnail({ preview, large }: Props) {
   const strong = { fontSize: 11 * scale, lineHeight: 14 * scale, fontWeight: '600' as const };
 
   switch (preview.kind) {
+    case 'image':
+      return (
+        <View style={[styles.frame, styles.flush, { backgroundColor: theme.surfaceContainerHigh }]}>
+          {preview.thumbnailPath ? (
+            <Image
+              source={{ uri: fileUri(preview.thumbnailPath) }}
+              style={styles.fill}
+              contentFit="cover"
+              transition={180}
+              recyclingKey={preview.thumbnailPath}
+            />
+          ) : (
+            <View style={styles.center}>
+              <Icon name="photo" size={28 * scale} color={theme.onSurfaceVariant} />
+            </View>
+          )}
+        </View>
+      );
+    case 'video':
+      return (
+        <View style={[styles.frame, styles.flush, { backgroundColor: theme.surfaceContainerHigh }]}>
+          {preview.thumbnailPath ? (
+            <Image
+              source={{ uri: fileUri(preview.thumbnailPath) }}
+              style={styles.fill}
+              contentFit="cover"
+              transition={180}
+              recyclingKey={preview.thumbnailPath}
+            />
+          ) : (
+            <View style={styles.center}>
+              <Icon name="videocam" size={28 * scale} color={theme.onSurfaceVariant} />
+            </View>
+          )}
+          {preview.durationMs ? <TimeChip ms={preview.durationMs} /> : null}
+        </View>
+      );
+    case 'audio':
+      return (
+        <View style={[styles.frame, styles.center, { backgroundColor: theme.surfaceContainerHigh }]}>
+          <Icon name="mic" size={28 * scale} color={theme.onSurfaceVariant} />
+          {preview.durationMs ? (
+            <Text variant="bodySmall" color="onSurfaceVariant" style={styles.caption}>
+              {formatDuration(preview.durationMs)}
+            </Text>
+          ) : null}
+        </View>
+      );
     case 'screenshot':
       return (
         <View style={[styles.frame, { backgroundColor: theme.surfaceContainerHigh }]}>
@@ -98,6 +162,33 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.half,
     overflow: 'hidden',
+  },
+  flush: {
+    padding: 0,
+  },
+  fill: {
+    flex: 1,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  caption: {
+    marginTop: Spacing.one,
+    textAlign: 'center',
+  },
+  timeChip: {
+    position: 'absolute',
+    right: Spacing.two,
+    bottom: Spacing.two,
+    borderRadius: Radius.small,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 1,
+  },
+  timeChipText: {
+    color: '#FFFFFF',
   },
   paper: {
     borderWidth: StyleSheet.hairlineWidth,

@@ -1,0 +1,40 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.aifounditnative'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.aifounditnative"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  kotlinOptions {
+    // tasks-retrieval/litertlm ship Kotlin 2.4 metadata; this module is the
+    // only consumer, so the check is relaxed here rather than bumping the
+    // whole app's Kotlin version.
+    freeCompilerArgs += ['-Xskip-metadata-version-check']
+  }
+  lintOptions {
+    abortOnError false
+  }
+  packagingOptions {
+    jniLibs {
+      useLegacyPackaging = true
+    }
+  }
+}
+
+dependencies {
+  // EmbeddingGemma 2 via MediaPipe Universal Embedder (pulls LiteRT-LM transitively)
+  implementation 'com.google.mediapipe:tasks-retrieval:latest.release'
+  // Gemma chat model via LiteRT-LM — direct API use, kept explicit
+  implementation 'com.google.ai.edge.litertlm:litertlm-android:latest.release'
+  implementation 'com.google.mlkit:text-recognition:16.0.1'
+  implementation 'com.google.mlkit:image-labeling:17.0.9'
+  implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
+  implementation 'androidx.work:work-runtime-ktx:2.9.1'
+}

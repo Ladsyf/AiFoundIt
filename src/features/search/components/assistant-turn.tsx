@@ -3,10 +3,11 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { FileCard } from '@/features/search/components/file-card';
-import { MoveProposalCard } from '@/features/search/components/move-proposal-card';
+import { FilePlanCard } from '@/features/search/components/file-plan-card';
 import type { AssistantMessage, FileItem, SearchResult } from '@/features/search/types';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -16,8 +17,9 @@ type Props = {
   message: AssistantMessage;
   fileById: (id: string) => FileItem | undefined;
   onOpenFile: (result: SearchResult) => void;
-  onConfirmMove: () => void;
-  onCancelMove: () => void;
+  onConfirmPlan: () => void;
+  onCancelPlan: () => void;
+  onToggleOp: (opId: string) => void;
 };
 
 const enter = FadeInDown.duration(280).easing(Easing.out(Easing.exp));
@@ -28,13 +30,29 @@ function pairs<T>(items: T[]) {
   return rows;
 }
 
-export function AssistantTurn({ message, fileById, onOpenFile, onConfirmMove, onCancelMove }: Props) {
+function TotalCard({ total }: { total: NonNullable<AssistantMessage['total']> }) {
+  const theme = useTheme();
+  const peso = `₱${total.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
+  return (
+    <View style={[styles.totalCard, { backgroundColor: theme.primaryContainer }]}>
+      <Text variant="titleLarge" color="onPrimaryContainer">
+        {peso}
+      </Text>
+      <Text variant="bodyMedium" color="onPrimaryContainer">
+        {total.count} receipt{total.count === 1 ? '' : 's'}
+        {total.merchant ? ` · ${total.merchant}` : ''} · summed in code
+      </Text>
+    </View>
+  );
+}
+
+export function AssistantTurn({ message, fileById, onOpenFile, onConfirmPlan, onCancelPlan, onToggleOp }: Props) {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
   const entering = reduceMotion ? undefined : enter;
   const [expanded, setExpanded] = useState(false);
 
-  if (message.status === 'searching') {
+  if (message.status === 'searching' && message.results.length === 0) {
     return (
       <View style={styles.searching} accessibilityLiveRegion="polite">
         <ActivityIndicator size="small" color={theme.primary} />
@@ -47,20 +65,9 @@ export function AssistantTurn({ message, fileById, onOpenFile, onConfirmMove, on
 
   const visible = expanded ? message.results : message.results.slice(0, INITIAL_VISIBLE);
   const hidden = message.results.length - visible.length;
-  const proposalFiles = message.proposal?.fileIds.map(fileById).filter((f): f is FileItem => Boolean(f)) ?? [];
 
   return (
     <View style={styles.turn}>
-      <Text variant="bodyLarge" accessibilityLiveRegion="polite">
-        {message.text}
-      </Text>
-
-      {message.partialIndex && !message.proposal && (
-        <Text variant="bodySmall" color="onSurfaceVariant">
-          Still indexing, so some files may not show up yet.
-        </Text>
-      )}
-
       {visible.length > 0 && (
         <Animated.View entering={entering} style={styles.grid}>
           {pairs(visible).map((row) => (
@@ -85,15 +92,41 @@ export function AssistantTurn({ message, fileById, onOpenFile, onConfirmMove, on
         </View>
       )}
 
+      {message.total && <TotalCard total={message.total} />}
+
       {message.proposal && (
         <Animated.View entering={entering}>
-          <MoveProposalCard
-            proposal={message.proposal}
-            files={proposalFiles}
-            onConfirm={onConfirmMove}
-            onCancel={onCancelMove}
+          <FilePlanCard
+            plan={message.proposal}
+            fileById={fileById}
+            onConfirm={onConfirmPlan}
+            onCancel={onCancelPlan}
+            onToggle={onToggleOp}
           />
         </Animated.View>
+      )}
+
+      {message.text ? (
+        <Text variant="bodyLarge" accessibilityLiveRegion="polite">
+          {message.text}
+        </Text>
+      ) : message.status === 'streaming' ? (
+        <ActivityIndicator size="small" color={theme.primary} style={styles.selfStart} />
+      ) : null}
+
+      {message.partialIndex && (
+        <Text variant="bodySmall" color="onSurfaceVariant">
+          Still indexing, so some files may not show up yet.
+        </Text>
+      )}
+
+      {message.proof && (
+        <View style={styles.proof}>
+          <Icon name="lock" size={14} color={theme.onSurfaceVariant} />
+          <Text variant="bodySmall" color="onSurfaceVariant">
+            {message.proof}
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -123,5 +156,19 @@ const styles = StyleSheet.create({
   more: {
     alignItems: 'flex-start',
     marginLeft: -Spacing.three,
+  },
+  selfStart: {
+    alignSelf: 'flex-start',
+  },
+  totalCard: {
+    borderRadius: Radius.large,
+    padding: Spacing.four,
+    gap: Spacing.half,
+  },
+  proof: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginTop: Spacing.one,
   },
 });

@@ -3,9 +3,9 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Radius, Spacing } from '@/constants/theme';
 import { FileThumbnail } from '@/features/search/components/file-thumbnail';
-import { formatDate } from '@/features/search/search-engine';
 import type { FileItem } from '@/features/search/types';
 import { useTheme } from '@/hooks/use-theme';
+import { formatDate } from '@/lib/format';
 
 type Props = {
   file: FileItem;
@@ -26,7 +26,7 @@ export function FileCard({ file, onPress }: Props) {
         android_ripple={{ color: theme.outlineVariant }}
         style={styles.pressable}>
         <View style={styles.thumb}>
-          <FileThumbnail preview={file.preview} />
+          {file.preview && <FileThumbnail preview={file.preview} />}
         </View>
         <View style={styles.meta}>
           <Text variant="labelLarge" numberOfLines={1}>

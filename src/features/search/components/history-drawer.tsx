@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +20,7 @@ function relativeDay(timestamp: number) {
 export function HistoryDrawer({ onClose }: { onClose: () => void }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { conversations, activeId, newChat, openConversation } = useSearch();
 
   const select = (id: string) => {
@@ -83,10 +85,22 @@ export function HistoryDrawer({ onClose }: { onClose: () => void }) {
         }
       />
 
+      <View style={styles.newChat}>
+        <Button
+          label="Settings"
+          icon="settings"
+          variant="text"
+          onPress={() => {
+            onClose();
+            router.push('/settings');
+          }}
+        />
+      </View>
+
       <View style={[styles.footer, { borderTopColor: theme.outlineVariant }]}>
         <Icon name="lock" size={18} color={theme.onSurfaceVariant} />
         <Text variant="bodySmall" color="onSurfaceVariant" style={styles.flex}>
-          Searches stay on this phone. This preview uses sample files.
+          Searches stay on this phone. Nothing is uploaded.
         </Text>
       </View>
     </View>

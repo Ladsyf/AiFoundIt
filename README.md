@@ -1,56 +1,71 @@
-# Welcome to your Expo app 👋
+# AiFoundIt
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A private search assistant for your phone. Ask in English or Taglish — "Nasaan yung resibo ko sa Jollibee?" — and it finds the photo, receipt, document, video or recording you mean. Everything runs on the device: no uploads, no account, works in airplane mode.
 
-## Get started
+Entry for **AppBuildersPH Hackathon 2026** (theme: Local AI).
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+- **Chat search** over the whole phone — photos, screenshots, PDFs, Office docs, text files, video and recordings — in plain English or Taglish.
+- **Hybrid retrieval.** FTS5 keyword search (BM25) merged with sqlite-vec nearest-neighbour search via Reciprocal Rank Fusion, with name, category and recency boosts.
+- **Grounded answers.** Result cards come straight from database rows — the LLM only writes a 1–3 sentence summary citing them, so it can't invent a file. No model → templated answers, search still works.
+- **Receipt math in code.** "Magkano nagastos ko sa GCash this week?" sums `₱` totals extracted by rules — never computed by the LLM.
+- **Organize with undo.** "Ilagay mo lahat ng resibo sa isang folder" shows a plan you can untick and confirm, moves files via native ops, and reverses the whole batch on Undo.
+- **Privacy guard.** Files that look like IDs, OTPs or passwords are flagged, hidden from general results unless you ask for them, and can be moved to a private folder.
+- **Proof line.** Every answer ends with "Found in X s · on-device · N bytes sent" measured with `TrafficStats`.
+- **At a glance** category counts after the first scan, scan rules in Settings, and a real onboarding flow (media permission → All files access → models → scan).
 
-2. Start the app
+## How it works
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+MediaStore + file walk ──▶ extract (ML Kit OCR/labels, PdfBox, XML) ──▶ embed (EmbeddingGemma 2, GPU)
+        │                                                                          │
+        └──────────────▶ inbox.db (native, Kotlin) ──▶ JS merge ──▶ aifoundit.db ◀───┘
+                                   chunks + FTS5 + vec0 + labels + facts
+                                              │
+                          query ─▶ plan ─▶ FTS5 + KNN ─▶ RRF ─▶ cards ─▶ Gemma 4 answer
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- `modules/aifoundit-native` (Kotlin) owns the heavy pipeline and writes an **inbox** database. JS drains it into the main DB in batches inside one transaction, then applies enrichment rules (category, `₱` totals, merchants, sensitive flags).
+- The same code path runs in a WorkManager worker for background indexing.
+- If `modules/aifoundit-native` isn't built yet, `src/lib/native` falls back to a JS mock (`isMockNative`), so the whole pipeline is exercisable in Expo Go.
 
-### Other setup steps
+## Build & run
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Requires Node, JDK 17 (Android Studio's JBR), the Android SDK, and a physical Android phone — the app reads real storage.
 
-## Learn more
+```bash
+npm install
+npx expo run:android --device      # development build (needs Metro running)
+# or a standalone release build for the demo:
+npx expo run:android --variant release --device
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Then push the models and open the app:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+adb shell mkdir -p /sdcard/Android/data/com.aifoundit.app/files/models
+adb push embeddinggemma-2-text-vision-440m.litertlm /sdcard/Android/data/com.aifoundit.app/files/models/
+adb push gemma-4-E2B-it-litert-lm.litertlm /sdcard/Android/data/com.aifoundit.app/files/models/
+```
 
-## Join the community
+The onboarding flow detects models in that directory; you can also import a `.litertlm`/`.gguf` file in-app. Without models, search still works via FTS5 keyword matching and templated answers.
 
-Join our community of developers creating universal apps.
+Verify: `npm run typecheck` · `npm run lint` · `npm test`
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## What needs internet
+
+Only the one-time model download. Everything else — scanning, OCR, embeddings, search, answers, file ops — is on-device. `Settings → Privacy` shows the app's sent-bytes counter.
+
+## Disclosures
+
+- **Models:** EmbeddingGemma 2 Text-Vision 440M (MediaPipe `tasks-retrieval`), Gemma 4 E2B / Gemma 3 1B (LiteRT-LM), ML Kit text recognition & image labeling, PdfBox-Android.
+- **Stack:** Expo SDK 57, Expo Router, React Native 0.86, expo-sqlite with FTS5 + sqlite-vec, Kotlin local Expo module (Android only).
+- **AI dev tools:** Claude Code (native stream), Devin / SWE-2 (TypeScript stream).
+- Demo files are specimens — sample IDs and receipts made for the demo, never real documents.
+
+## Docs
+
+- `docs/APP_SPEC.md` — product & technical spec, demo script, judge Q&A
+- `docs/BUILD_PLAN.md` — build plan, native contract, cut rules
+- `docs/TESTING.md` — manual test scenarios

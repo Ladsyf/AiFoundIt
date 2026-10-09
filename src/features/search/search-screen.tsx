@@ -1,7 +1,7 @@
 import { useNavigation } from 'expo-router';
 import { DrawerActions } from 'expo-router/react-navigation';
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Keyboard, KeyboardAvoidingView, StyleSheet, View } from 'react-native';
+import { FlatList, Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { AssistantTurn } from '@/features/search/components/assistant-turn';
 import { Composer } from '@/features/search/components/composer';
 import { FileSheet } from '@/features/search/components/file-sheet';
+import { GlanceTiles } from '@/features/search/components/glance-tiles';
 import { IndexStatus } from '@/features/search/components/index-status';
 import { TopAppBar } from '@/features/search/components/top-app-bar';
 import { UserBubble } from '@/features/search/components/user-bubble';
@@ -17,6 +18,8 @@ import { AccessRequest, Suggestions } from '@/features/search/components/welcome
 import { useSearch } from '@/features/search/store';
 import type { Message, SearchResult } from '@/features/search/types';
 import { useTheme } from '@/hooks/use-theme';
+
+const BACKEND_LABEL: Record<string, string> = { gpu: 'GPU', cpu: 'CPU', none: 'no model' };
 
 export function SearchScreen() {
   const theme = useTheme();
@@ -30,7 +33,9 @@ export function SearchScreen() {
   const messages = conversation?.messages ?? [];
   const granted = store.access === 'granted';
   const last = messages.at(-1);
-  const lastKey = last ? `${last.id}:${last.role === 'assistant' ? last.status : ''}` : '';
+  const lastKey = last
+    ? `${last.id}:${last.role === 'assistant' ? `${last.status}:${last.text.length}` : ''}`
+    : '';
 
   useEffect(() => {
     if (!lastKey) return;
@@ -51,10 +56,13 @@ export function SearchScreen() {
         message={item}
         fileById={store.fileById}
         onOpenFile={setOpened}
-        onConfirmMove={() => conversation && store.confirmMove(conversation.id, item.id)}
-        onCancelMove={() => conversation && store.cancelMove(conversation.id, item.id)}
+        onConfirmPlan={() => conversation && store.confirmPlan(conversation.id, item.id)}
+        onCancelPlan={() => conversation && store.cancelPlan(conversation.id, item.id)}
+        onToggleOp={(opId) => conversation && store.togglePlanOp(conversation.id, item.id, opId)}
       />
     );
+
+  const backend = `embedder on ${BACKEND_LABEL[store.backends.embedder] ?? store.backends.embedder}`;
 
   return (
     <View style={[styles.root, { backgroundColor: theme.surface, paddingTop: insets.top }]}>
@@ -64,16 +72,23 @@ export function SearchScreen() {
         onNewChat={store.newChat}
         canStartNew={conversation !== null}
       />
-      {granted && store.indexed < store.indexTotal && (
-        <IndexStatus indexed={store.indexed} total={store.indexTotal} />
+      {granted && store.indexing && (
+        <IndexStatus indexed={store.indexed} total={store.indexTotal} backend={backend} />
       )}
 
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
         <View style={styles.content}>
           {!granted ? (
-            <AccessRequest onAllow={store.grantAccess} />
+            <AccessRequest />
           ) : messages.length === 0 ? (
-            <Suggestions onPick={send} />
+            <ScrollView
+              style={styles.flex}
+              contentContainerStyle={styles.empty}
+              keyboardShouldPersistTaps="handled">
+              <View style={styles.flexSpacer} />
+              <GlanceTiles onPick={send} />
+              <Suggestions onPick={send} />
+            </ScrollView>
           ) : (
             <FlatList
               ref={listRef}
@@ -118,6 +133,13 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
+  },
+  empty: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+  },
+  flexSpacer: {
+    flex: 1,
   },
   list: {
     paddingHorizontal: Spacing.four,

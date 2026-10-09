@@ -1,0 +1,152 @@
+import type { FileKind } from '@/lib/native/contract';
+import { contentTerms, dateRangeFor, tokenize } from '@/lib/search/tokenize';
+import {
+    COMPUTE_WORDS,
+    COUNT_WORDS,
+    DESCRIBE_WORDS,
+    KIND_WORDS,
+    MERCHANTS,
+    PRIVACY_WORDS,
+    PRIVATE_FOLDER,
+    RECEIPTS_FOLDER,
+    TIDY_WORDS,
+} from '@/lib/search/vocab';
+
+export type Intent = 'find' | 'compute' | 'count' | 'describe' | 'organize' | 'privacy';
+
+export type QueryPlan = {
+  intent: Intent;
+  queryEn: string;
+  terms: string[];
+  kinds?: FileKind[];
+  screenshot?: boolean;
+  category?: string;
+  merchant?: string;
+  dateFrom?: number;
+  dateTo?: number;
+  operation?: 'move' | 'copy';
+  destination?: string;
+  includeSensitive: boolean;
+};
+
+const ID_TERMS = new Set(['id', 'ids', 'philhealth', 'passport', 'umid', 'sss', 'tin', 'philsys', 'license']);
+const QUESTION_MARKERS = new Set(['ba', 'do', 'does', 'any', 'meron', 'mayroon', 'may', 'is', 'there']);
+
+export function heuristicPlan(query: string, today = new Date()): QueryPlan {
+  const tokens = tokenize(query);
+  const lower = query.toLowerCase();
+  const terms = contentTerms(tokens);
+
+  let kinds: FileKind[] | undefined;
+  let screenshot = false;
+  let category: string | undefined;
+  for (const t of tokens) {
+    const kw = KIND_WORDS[t];
+    if (!kw) continue;
+    if (kw.kinds) kinds = [...new Set([...(kinds ?? []), ...kw.kinds])];
+    if (kw.screenshot) screenshot = true;
+    if (kw.category) category = kw.category;
+  }
+
+  const range = dateRangeFor(tokens, today);
+  const merchant = MERCHANTS.find((m) => lower.includes(m));
+  const asksSensitive =
+    [...PRIVACY_WORDS].some((w) => tokens.includes(w)) || tokens.some((t) => ID_TERMS.has(t));
+  const asksExistence = tokens.some((t) => QUESTION_MARKERS.has(t));
+
+  let intent: Intent = 'find';
+  if (tokens.some((t) => COMPUTE_WORDS.has(t))) intent = 'compute';
+  else if (tokens.some((t) => COUNT_WORDS.has(t))) intent = 'count';
+  else if (tokens.some((t) => TIDY_WORDS.has(t))) intent = 'organize';
+  else if (tokens.some((t) => DESCRIBE_WORDS.has(t))) intent = 'describe';
+  else if (asksSensitive && asksExistence) intent = 'privacy';
+
+  let destination: string | undefined;
+  if (intent === 'organize') {
+    if (category === 'receipt' || lower.includes('resibo')) destination = RECEIPTS_FOLDER;
+    else if (asksSensitive || lower.includes('private')) destination = PRIVATE_FOLDER;
+    else destination = 'Documents/Organized';
+  }
+
+  return {
+    intent,
+    queryEn: query,
+    terms,
+    kinds,
+    screenshot,
+    category,
+    merchant,
+    dateFrom: range?.from,
+    dateTo: range?.to,
+    operation: intent === 'organize' ? 'move' : undefined,
+    destination,
+    includeSensitive: intent === 'privacy' || category === 'id' || asksSensitive,
+  };
+}
+
+const PLAN_SCHEMA = `{"intent":"find|compute|count|describe|organize|privacy","queryEn":"english keywords","keywords":["..."],"kinds":["image|pdf|doc|text|audio|video"],"dateFrom":"YYYY-MM-DD|null","dateTo":"YYYY-MM-DD|null","category":"receipt|id|school|work|screenshot|meme|document|null","operation":"move|copy|null","destination":"folder path|null"}`;
+
+const INTENTS: Intent[] = ['find', 'compute', 'count', 'describe', 'organize', 'privacy'];
+const KINDS: FileKind[] = ['image', 'pdf', 'doc', 'text', 'audio', 'video'];
+
+export function parsePlanJson(raw: string, fallback: QueryPlan): QueryPlan {
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) return fallback;
+  try {
+    const p = JSON.parse(match[0]) as Record<string, unknown>;
+    const intent = INTENTS.includes(p.intent as Intent) ? (p.intent as Intent) : fallback.intent;
+    const keywords = Array.isArray(p.keywords) ? p.keywords.filter((k): k is string => typeof k === 'string') : [];
+    const kinds = Array.isArray(p.kinds)
+      ? p.kinds.filter((k): k is FileKind => KINDS.includes(k as FileKind))
+      : fallback.kinds;
+    const parseDate = (v: unknown) => {
+      if (typeof v !== 'string') return undefined;
+      const t = Date.parse(`${v}T00:00:00`);
+      return Number.isNaN(t) ? undefined : t;
+    };
+    return {
+      ...fallback,
+      intent,
+      queryEn: typeof p.queryEn === 'string' && p.queryEn.trim() ? p.queryEn : fallback.queryEn,
+      terms: keywords.length > 0 ? keywords.map((k) => k.toLowerCase()) : fallback.terms,
+      kinds: kinds && kinds.length > 0 ? kinds : fallback.kinds,
+      category: typeof p.category === 'string' ? p.category : fallback.category,
+      dateFrom: parseDate(p.dateFrom) ?? fallback.dateFrom,
+      dateTo: parseDate(p.dateTo) ?? fallback.dateTo,
+      operation: p.operation === 'move' || p.operation === 'copy' ? p.operation : fallback.operation,
+      destination: typeof p.destination === 'string' ? p.destination : fallback.destination,
+      includeSensitive: fallback.includeSensitive || intent === 'privacy',
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+const PLAN_PROMPT = (query: string, today: string) =>
+  `You plan file searches on a phone. Today is ${today}. ` +
+  `Read the question (English or Taglish) and reply with JSON only, matching this shape: ${PLAN_SCHEMA}\n\n` +
+  `Q: Nasaan yung resibo ko sa Jollibee?\n` +
+  `{"intent":"find","queryEn":"Jollibee receipt","keywords":["jollibee","receipt"],"kinds":[],"dateFrom":null,"dateTo":null,"category":"receipt","operation":null,"destination":null}\n` +
+  `Q: Magkano nagastos ko sa GCash this week?\n` +
+  `{"intent":"compute","queryEn":"GCash receipts","keywords":["gcash"],"kinds":[],"dateFrom":"this week","dateTo":null,"category":"receipt","operation":null,"destination":null}\n` +
+  `Q: Ilagay mo lahat ng resibo sa isang folder\n` +
+  `{"intent":"organize","queryEn":"receipts","keywords":["receipt"],"kinds":[],"dateFrom":null,"dateTo":null,"category":"receipt","operation":"move","destination":"Documents/Receipts"}\n` +
+  `Q: ${query}\n`;
+
+// LLM plan when a model is loaded and the query is long enough to benefit;
+// heuristic plan otherwise. Always resolves with a usable plan.
+export async function planQuery(query: string, opts: { llmAvailable: boolean; today?: Date }): Promise<QueryPlan> {
+  const fallback = heuristicPlan(query, opts.today);
+  if (!opts.llmAvailable || tokenize(query).length <= 3) return fallback;
+
+  const today = (opts.today ?? new Date()).toISOString().slice(0, 10);
+  // Loaded lazily so heuristicPlan/parsePlanJson stay usable without the
+  // native bridge (unit tests, Expo Go fallback).
+  const { generateText } = await import('@/lib/llm');
+  const outcome = await generateText(
+    { prompt: PLAN_PROMPT(query, today), maxTokens: 160, temperature: 0.1 },
+    { timeoutMs: 4_000 },
+  );
+  if (!outcome.ok) return fallback;
+  return parsePlanJson(outcome.text, fallback);
+}
