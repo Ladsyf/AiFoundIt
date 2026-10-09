@@ -44,8 +44,7 @@
       "expo-sharing",
       "expo-build-properties",
       "./plugins/withKotlinMetadataSkip.js",
-      "expo-video",
-      "expo-audio"
+      "./plugins/withGradleHeap.js"
     ],
     "experiments": {
       "typedRoutes": true,

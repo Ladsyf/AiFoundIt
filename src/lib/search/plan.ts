@@ -1,3 +1,5 @@
+import { findMerchant } from '@/lib/enrich/facts';
+import { sanitizeDestination } from '@/lib/intents/destination';
 import type { FileKind } from '@/lib/native/contract';
 import { contentTerms, dateRangeFor, tokenize } from '@/lib/search/tokenize';
 import {
@@ -5,7 +7,6 @@ import {
     COUNT_WORDS,
     DESCRIBE_WORDS,
     KIND_WORDS,
-    MERCHANTS,
     PRIVACY_WORDS,
     PRIVATE_FOLDER,
     RECEIPTS_FOLDER,
@@ -49,7 +50,7 @@ export function heuristicPlan(query: string, today = new Date()): QueryPlan {
   }
 
   const range = dateRangeFor(tokens, today);
-  const merchant = MERCHANTS.find((m) => lower.includes(m));
+  const merchant = findMerchant(lower);
   const asksSensitive =
     [...PRIVACY_WORDS].some((w) => tokens.includes(w)) || tokens.some((t) => ID_TERMS.has(t));
   const asksExistence = tokens.some((t) => QUESTION_MARKERS.has(t));
@@ -114,7 +115,9 @@ export function parsePlanJson(raw: string, fallback: QueryPlan): QueryPlan {
       dateFrom: parseDate(p.dateFrom) ?? fallback.dateFrom,
       dateTo: parseDate(p.dateTo) ?? fallback.dateTo,
       operation: p.operation === 'move' || p.operation === 'copy' ? p.operation : fallback.operation,
-      destination: typeof p.destination === 'string' ? p.destination : fallback.destination,
+      // The folder comes from the model, so it is cleaned up and kept inside the phone's storage.
+      destination:
+        typeof p.destination === 'string' ? sanitizeDestination(p.destination, fallback.destination) : fallback.destination,
       includeSensitive: fallback.includeSensitive || intent === 'privacy',
     };
   } catch {
@@ -128,7 +131,7 @@ const PLAN_PROMPT = (query: string, today: string) =>
   `Q: Nasaan yung resibo ko sa Jollibee?\n` +
   `{"intent":"find","queryEn":"Jollibee receipt","keywords":["jollibee","receipt"],"kinds":[],"dateFrom":null,"dateTo":null,"category":"receipt","operation":null,"destination":null}\n` +
   `Q: Magkano nagastos ko sa GCash this week?\n` +
-  `{"intent":"compute","queryEn":"GCash receipts","keywords":["gcash"],"kinds":[],"dateFrom":"this week","dateTo":null,"category":"receipt","operation":null,"destination":null}\n` +
+  `{"intent":"compute","queryEn":"GCash receipts","keywords":["gcash"],"kinds":[],"dateFrom":null,"dateTo":null,"category":"receipt","operation":null,"destination":null}\n` +
   `Q: Ilagay mo lahat ng resibo sa isang folder\n` +
   `{"intent":"organize","queryEn":"receipts","keywords":["receipt"],"kinds":[],"dateFrom":null,"dateTo":null,"category":"receipt","operation":"move","destination":"Documents/Receipts"}\n` +
   `Q: ${query}\n`;
@@ -145,7 +148,9 @@ export async function planQuery(query: string, opts: { llmAvailable: boolean; to
   const { generateText } = await import('@/lib/llm');
   const outcome = await generateText(
     { prompt: PLAN_PROMPT(query, today), maxTokens: 160, temperature: 0.1 },
-    { timeoutMs: 4_000 },
+    // The plan must not hold up the results: a first word within 4 s, and the whole plan within 6 s, or the
+    // keyword planner is used instead.
+    { timeoutMs: 4_000, totalMs: 6_000 },
   );
   if (!outcome.ok) return fallback;
   return parsePlanJson(outcome.text, fallback);

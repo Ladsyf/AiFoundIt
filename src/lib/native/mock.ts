@@ -1,11 +1,15 @@
 import type {
     AiFoundItNative,
+    DeviceInfo,
+    DownloadRequest,
     FileOp,
     FileOpResult,
     GenerateRequest,
     InboxItem,
     IndexStatus,
     ModelConfig,
+    ModelDownloadEvent,
+    ModelFileInfo,
     NativeEventMap,
     NativeEventName,
     ScanConfig,
@@ -30,7 +34,21 @@ export function createMockNative(): AiFoundItNative & {
   let seen = new Map<string, string>(); // path -> `${size}:${mtime}`
   let running = false;
   let nextInboxId = 100_000;
-  let status: IndexStatus = { running: false, done: 0, total: 0, failed: 0, embedder: 'cpu', llm: 'none' };
+  let status: IndexStatus = {
+    running: false,
+    done: 0,
+    total: 0,
+    failed: 0,
+    embedder: 'cpu',
+    llm: 'none',
+    llmLoading: false,
+  };
+
+  // Model downloads are simulated so the screens can be tried in Expo Go. The files are not real.
+  const modelsDir = '/storage/emulated/0/Android/data/com.aifoundit.app/files/models';
+  const models = new Map<string, ModelFileInfo>();
+  const downloads = new Map<string, { timer: ReturnType<typeof setInterval>; last: ModelDownloadEvent }>();
+  const MOCK_STORAGE_ROOT = '/storage/emulated/0';
 
   for (const f of demoCorpus()) files.set(f.path, f);
 
@@ -62,8 +80,47 @@ export function createMockNative(): AiFoundItNative & {
     inbox.set(copy.id, copy);
   };
 
+  const startMockDownload = (req: DownloadRequest) => {
+    if (downloads.has(req.id)) return;
+    const total = req.expectedBytes > 0 ? req.expectedBytes : 100_000_000;
+    let bytes = 0;
+    const send = (event: ModelDownloadEvent) => {
+      const current = downloads.get(req.id);
+      if (current) current.last = event;
+      emit('onModelDownload', event);
+    };
+    const timer = setInterval(() => {
+      bytes = Math.min(total, bytes + total / 25);
+      if (bytes >= total) {
+        clearInterval(timer);
+        downloads.delete(req.id);
+        models.set(req.fileName, { name: req.fileName, path: `${modelsDir}/${req.fileName}`, size: total, partial: false });
+        emit('onModelDownload', { id: req.id, state: 'done', bytes: total, total });
+      } else {
+        send({ id: req.id, state: 'downloading', bytes, total });
+      }
+    }, 200);
+    downloads.set(req.id, { timer, last: { id: req.id, state: 'downloading', bytes: 0, total } });
+  };
+
+  const resolvePath = (p: string) => (p.startsWith('/') ? p : `${MOCK_STORAGE_ROOT}/${p}`);
+
+  // Same rule as the real file operations: a taken name becomes "name (1).ext", never an overwrite.
+  const uniquePath = (path: string) => {
+    if (!files.has(path)) return path;
+    const slash = path.lastIndexOf('/');
+    const dir = path.slice(0, slash);
+    const name = path.slice(slash + 1);
+    const dot = name.lastIndexOf('.');
+    const base = dot > 0 ? name.slice(0, dot) : name;
+    const ext = dot > 0 ? name.slice(dot) : '';
+    let n = 1;
+    while (files.has(`${dir}/${base} (${n})${ext}`)) n++;
+    return `${dir}/${base} (${n})${ext}`;
+  };
+
   const api: AiFoundItNative = {
-    getModelsDir: () => '/storage/emulated/0/Android/data/com.aifoundit.app/files/models',
+    getModelsDir: () => modelsDir,
     hasAllFilesAccess: () => true,
     openAllFilesAccessSettings: async () => {},
     openBatterySettings: async () => {},
@@ -142,7 +199,7 @@ export function createMockNative(): AiFoundItNative & {
         done++;
         emit('onFileOpsProgress', { batchId, done, total: ops.length, current: op.from });
         if (op.op === 'mkdir') {
-          results.push({ op, ok: true, finalPath: op.to });
+          results.push({ op, ok: true, finalPath: resolvePath(op.to) });
           continue;
         }
         const src = op.from ? files.get(op.from) : undefined;
@@ -150,19 +207,17 @@ export function createMockNative(): AiFoundItNative & {
           results.push({ op, ok: false, error: 'not found' });
           continue;
         }
-        const to = op.to;
-        if (files.has(to)) {
-          results.push({ op, ok: false, error: 'destination exists' });
-          continue;
-        }
+        // Like the real file operations: relative paths start at the storage root, a taken name gets "(1)".
+        const to = uniquePath(resolvePath(op.to));
+        const folder = '/' + to.slice(MOCK_STORAGE_ROOT.length + 1, to.lastIndexOf('/'));
         if (op.op === 'move' || op.op === 'rename') {
           files.delete(op.from);
-          const moved = { ...src, path: to, name: to.split('/').pop() ?? src.name, modifiedAt: Date.now() };
+          const moved = { ...src, path: to, folder, name: to.split('/').pop() ?? src.name, modifiedAt: Date.now() };
           files.set(to, moved);
           seen.delete(op.from);
           results.push({ op, ok: true, finalPath: to });
         } else {
-          const copy = { ...src, path: to, name: to.split('/').pop() ?? src.name, modifiedAt: Date.now() };
+          const copy = { ...src, path: to, folder, name: to.split('/').pop() ?? src.name, modifiedAt: Date.now() };
           files.set(to, copy);
           seen.delete(to);
           results.push({ op, ok: true, finalPath: to });
@@ -171,7 +226,42 @@ export function createMockNative(): AiFoundItNative & {
       return results;
     },
 
+    resetIndex: async () => {
+      seen = new Map();
+      inbox.clear();
+    },
+
+    listModels: async () => [...models.values()],
+    downloadModel: async (req: DownloadRequest) => startMockDownload(req),
+    pauseDownload: async (id: string) => {
+      const d = downloads.get(id);
+      if (!d) return;
+      clearInterval(d.timer);
+      downloads.delete(id);
+      emit('onModelDownload', { ...d.last, state: 'paused' });
+    },
+    cancelDownload: async (id: string) => {
+      const d = downloads.get(id);
+      if (d) clearInterval(d.timer);
+      downloads.delete(id);
+      emit('onModelDownload', { id, state: 'cancelled', bytes: 0, total: 0 });
+    },
+    getDownloads: async () => [...downloads.values()].map((d) => d.last),
+    importModel: async (_uri: string, fileName: string) => {
+      const info: ModelFileInfo = { name: fileName, path: `${modelsDir}/${fileName}`, size: 1, partial: false };
+      models.set(fileName, info);
+      return info;
+    },
+    deleteModel: async (fileName: string) => models.delete(fileName),
+    getDeviceInfo: async (): Promise<DeviceInfo> => ({
+      totalRamBytes: 7.4 * 1024 * 1024 * 1024,
+      freeStorageBytes: 40 * 1024 * 1024 * 1024,
+      sdk: 35,
+      model: 'Demo phone',
+    }),
+
     bytesSent: async () => 0,
+    downloadTraffic: async () => ({ received: 0, sent: 0 }),
     scheduleBackground: async () => {},
     cancelBackground: async () => {},
   };

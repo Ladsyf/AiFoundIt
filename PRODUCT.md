@@ -33,7 +33,7 @@ Plain-language search and organization across the whole phone, with on-device AI
 - **Files never leave the device.** No uploads, no cloud processing of file contents. This is a strict, non-negotiable commitment.
 - **Works offline.** Search and organizing must work without a network connection.
 - **Never auto-delete or auto-move.** Every destructive or relocating action needs explicit user confirmation.
-- **On-device AI models:** EmbeddingGemma 2 Text-Vision 440M (embeddings, MediaPipe on GPU) and Gemma 4 E2B via LiteRT-LM (chat answers, vision); Gemma 3 1B is the small-phone fallback. Without models, search degrades to FTS5 keywords with templated answers — it never stops working.
+- **On-device AI models:** EmbeddingGemma 2 (embeddings, MediaPipe on GPU) and Gemma 4 E2B via LiteRT-LM (chat answers, reads photos); Gemma 4 E4B, Gemma 3 1B and Qwen2.5 1.5B are other choices in the in-app list. People download the models inside the app, or import a file. Without models, search degrades to FTS5 keywords with templated answers — it never stops working.
 - **Hackathon deadline:** demo build, submitted 2026-10-10.
 - Stack: Expo SDK 57 + Expo Router, React Native 0.86, TypeScript, expo-sqlite (FTS5 + sqlite-vec), one local Kotlin module (`modules/aifoundit-native`). JS pipeline lives in `src/lib/` with a mock native bridge so it runs without the Kotlin module.
 

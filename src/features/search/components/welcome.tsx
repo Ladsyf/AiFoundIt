@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Radius, Spacing } from '@/constants/theme';
+import { ModelsStep } from '@/features/models/models-step';
 import { useSearch } from '@/features/search/store';
 import { useTheme } from '@/hooks/use-theme';
-import { detectModelConfig, importModelFile, isMockNative } from '@/lib/models';
+import { isMockNative } from '@/lib/models';
 import { native } from '@/lib/native';
 
 const SUGGESTIONS: { icon: IconName; text: string }[] = [
@@ -19,11 +20,30 @@ const SUGGESTIONS: { icon: IconName; text: string }[] = [
   { icon: 'drive_file_move', text: 'Ilagay mo lahat ng resibo sa isang folder' },
 ];
 
-const MEDIA_PERMISSIONS: Parameters<typeof PermissionsAndroid.requestMultiple>[0] = [
+type Permission = Parameters<typeof PermissionsAndroid.requestMultiple>[0][number];
+
+// Android 13 and newer ask for photos, videos and audio one by one; older versions have one storage permission.
+function mediaPermissions(): Permission[] {
+  if (typeof Platform.Version === 'number' && Platform.Version >= 33) {
+    const list: Permission[] = [
+      'android.permission.READ_MEDIA_IMAGES',
+      'android.permission.READ_MEDIA_VIDEO',
+      'android.permission.READ_MEDIA_AUDIO',
+      'android.permission.POST_NOTIFICATIONS',
+    ];
+    // Android 14 lets people share only some photos; the scanner works with that.
+    if (Platform.Version >= 34) list.push('android.permission.READ_MEDIA_VISUAL_USER_SELECTED');
+    return list;
+  }
+  return ['android.permission.READ_EXTERNAL_STORAGE'];
+}
+
+const MEDIA_GRANTS: Permission[] = [
   'android.permission.READ_MEDIA_IMAGES',
   'android.permission.READ_MEDIA_VIDEO',
   'android.permission.READ_MEDIA_AUDIO',
-  'android.permission.POST_NOTIFICATIONS',
+  'android.permission.READ_MEDIA_VISUAL_USER_SELECTED',
+  'android.permission.READ_EXTERNAL_STORAGE',
 ];
 
 type Step = 'media' | 'allFiles' | 'models' | 'scan';
@@ -43,11 +63,8 @@ function StepDot({ active, done }: { active: boolean; done: boolean }) {
 async function requestMediaPermissions(): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
   try {
-    const result = await PermissionsAndroid.requestMultiple(MEDIA_PERMISSIONS);
-    const mediaOk =
-      result['android.permission.READ_MEDIA_IMAGES'] === PermissionsAndroid.RESULTS.GRANTED ||
-      result['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED;
-    return mediaOk || Object.values(result).some((v) => v === PermissionsAndroid.RESULTS.GRANTED);
+    const result = await PermissionsAndroid.requestMultiple(mediaPermissions());
+    return MEDIA_GRANTS.some((name) => result[name] === PermissionsAndroid.RESULTS.GRANTED);
   } catch {
     return true;
   }
@@ -58,20 +75,12 @@ export function AccessRequest() {
   const store = useSearch();
   const [step, setStep] = useState<Step>(isMockNative ? 'models' : 'media');
   const [busy, setBusy] = useState(false);
-  const [models, setModels] = useState<{ embedder: boolean; llm: boolean } | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const appState = useRef(AppState.currentState);
 
-  const checkModels = useCallback(async () => {
-    const { config } = await detectModelConfig();
-    setModels({ embedder: config.embedderPath !== null, llm: config.llmPath !== null });
-  }, []);
+  const toModels = useCallback(() => setStep('models'), []);
 
-  const toModels = useCallback(() => {
-    setStep('models');
-    void checkModels();
-  }, [checkModels]);
-
+  // Coming back from the system "All files access" screen, move on once it has been allowed.
   useEffect(() => {
     if (step !== 'allFiles') return;
     const sub = AppState.addEventListener('change', (next) => {
@@ -91,7 +100,7 @@ export function AccessRequest() {
         if (native.hasAllFilesAccess()) toModels();
         else setStep('allFiles');
       } else {
-        setNote('Without media access AiFoundIt can only search documents you pick. You can change this in Settings.');
+        setNote('Without access to photos and videos they cannot be searched. You can allow it later in the phone’s settings.');
         setStep('allFiles');
       }
     } finally {
@@ -100,23 +109,8 @@ export function AccessRequest() {
   };
 
   const skipAllFiles = () => {
-    setNote('Skipped. Photos, videos and audio will still be indexed; documents need All files access.');
+    setNote('Skipped. Photos, videos and audio are still searched; documents need All files access.');
     toModels();
-  };
-
-  const importModel = async () => {
-    setBusy(true);
-    try {
-      const file = await importModelFile();
-      if (file) {
-        setNote(`Imported ${file.name}`);
-        await checkModels();
-      }
-    } catch {
-      setNote('Import failed — you can also push the model with adb.');
-    } finally {
-      setBusy(false);
-    }
   };
 
   const beginScan = async () => {
@@ -125,11 +119,16 @@ export function AccessRequest() {
     try {
       await store.startScan();
     } catch {
-      setNote('The scan failed. You can rescan from Settings.');
+      store.showSnackbar({ text: 'The scan could not finish. You can scan again from Settings.' });
     }
   };
 
   const steps: Step[] = isMockNative ? ['models', 'scan'] : ['media', 'allFiles', 'models', 'scan'];
+  const stepLabel = (s: Step) => `Step ${steps.indexOf(s) + 1} of ${steps.length}`;
+
+  if (step === 'models') {
+    return <ModelsStep stepLabel={stepLabel('models')} onContinue={() => void beginScan()} />;
+  }
 
   return (
     <View style={styles.center}>
@@ -152,44 +151,26 @@ export function AccessRequest() {
       {step === 'media' && (
         <View style={styles.stepBody}>
           <Text variant="bodyMedium" color="onSurfaceVariant" style={styles.centerText}>
-            Step 1 of 4 — allow AiFoundIt to see your photos, videos and audio.
+            {stepLabel('media')} — allow AiFoundIt to see your photos, videos and audio.
           </Text>
-          <Button label="Allow media access" onPress={() => void allowMedia()} />
+          <Button label={busy ? 'Working…' : 'Allow media access'} disabled={busy} onPress={() => void allowMedia()} />
         </View>
       )}
 
       {step === 'allFiles' && (
         <View style={styles.stepBody}>
-          <Text variant="bodyMedium" color="onSurfaceVariant" style={styles.centerText}>
-            Step 2 of 4 — “All files access” lets AiFoundIt read PDFs and documents anywhere on the phone.
+          <Text variant="bodyMedium" color="onSurfaceVariant" style={[styles.centerText, styles.measure]}>
+            {stepLabel('allFiles')} — “All files access” lets AiFoundIt read PDFs and documents anywhere on the phone.
           </Text>
           <Button label="Open settings" onPress={() => void native.openAllFilesAccessSettings()} />
           <Button label="Skip for now" variant="text" onPress={skipAllFiles} />
         </View>
       )}
 
-      {step === 'models' && (
-        <View style={styles.stepBody}>
-          <Text variant="bodyMedium" color="onSurfaceVariant" style={styles.centerText}>
-            {isMockNative
-              ? 'Running without the native module — search uses keywords and basic vectors.'
-              : 'Step 3 of 4 — on-device models. Import the .litertlm files pushed to this phone, or continue without them.'}
-          </Text>
-          {models && !isMockNative && (
-            <Text variant="bodySmall" color="onSurfaceVariant" style={styles.centerText}>
-              {models.embedder ? 'Embedder found. ' : 'No embedder model. '}
-              {models.llm ? 'Chat model found.' : 'No chat model — answers will be templated.'}
-            </Text>
-          )}
-          <Button label="Import model file" variant="tonal" icon="download" onPress={() => void importModel()} />
-          <Button label={busy ? 'Working…' : 'Continue'} onPress={() => void beginScan()} />
-        </View>
-      )}
-
       {step === 'scan' && (
         <View style={styles.stepBody}>
-          <Text variant="bodyMedium" color="onSurfaceVariant" style={styles.centerText}>
-            Scanning this phone — priority folders first. Search works as soon as the first files land.
+          <Text variant="bodyMedium" color="onSurfaceVariant" style={[styles.centerText, styles.measure]}>
+            Scanning this phone, chosen folders first. Search works as soon as the first files land.
           </Text>
           <Button label="Start searching" variant="tonal" onPress={store.grantAccess} />
         </View>

@@ -28,9 +28,9 @@ export type FileRow = {
 export function previewFor(row: FileRow, snippetLines?: string[]): FilePreview {
   switch (row.kind) {
     case 'image':
-      return { kind: 'image', thumbnailPath: row.thumbnail_path ?? undefined };
+      return { kind: 'image', thumbnailPath: row.thumbnail_path ?? undefined, sourcePath: row.path };
     case 'video':
-      return { kind: 'video', thumbnailPath: row.thumbnail_path ?? undefined, durationMs: row.duration_ms ?? undefined };
+      return { kind: 'video', thumbnailPath: row.thumbnail_path ?? undefined, sourcePath: row.path, durationMs: row.duration_ms ?? undefined };
     case 'audio':
       return { kind: 'audio', durationMs: row.duration_ms ?? undefined };
     default:
@@ -63,6 +63,7 @@ export function rowToItem(
     mime: row.mime,
     thumbnailPath: row.thumbnail_path ?? undefined,
     snippet: opts.snippet,
+    description: row.description ?? undefined,
     highlights: opts.highlights,
     page: opts.page,
     startMs: opts.startMs,
@@ -116,18 +117,11 @@ export async function countFiles(): Promise<number> {
 
 export async function indexSizeBytes(): Promise<number> {
   const db = await getDb();
-  const pageCount = await db.getFirstAsync<{ n: number }>('PRAGMA page_count');
-  const pageSize = await db.getFirstAsync<{ n: number }>('PRAGMA page_size');
-  return (pageCount?.n ?? 0) * (pageSize?.n ?? 0);
+  // A PRAGMA answers with a column named after itself, so the table-valued form is used to get one named "n".
+  const size = await db.getFirstAsync<{ n: number }>(
+    'SELECT (SELECT page_count FROM pragma_page_count) * (SELECT page_size FROM pragma_page_size) AS n',
+  );
+  return size?.n ?? 0;
 }
 
-export async function deleteIndex(): Promise<void> {
-  const db = await getDb();
-  await db.execAsync(`
-    DELETE FROM files;
-    DELETE FROM chunks_fts;
-    DELETE FROM labels;
-    DELETE FROM facts;
-    DELETE FROM index_steps;
-  `);
-}
+// Deleting or re-doing the index lives in src/lib/db/maintenance.ts: it has to reset the native side too.

@@ -7,8 +7,8 @@ export type FilePreview =
   | { kind: 'receipt'; merchant: string; items: [string, string][]; total: string }
   | { kind: 'document'; title: string; lines: string[] }
   | { kind: 'photo'; subject: string; tone: string }
-  | { kind: 'image'; thumbnailPath?: string }
-  | { kind: 'video'; thumbnailPath?: string; durationMs?: number }
+  | { kind: 'image'; thumbnailPath?: string; sourcePath?: string }
+  | { kind: 'video'; thumbnailPath?: string; sourcePath?: string; durationMs?: number }
   | { kind: 'audio'; durationMs?: number };
 
 export type FileItem = {
@@ -27,6 +27,8 @@ export type FileItem = {
   mime: string;
   thumbnailPath?: string;
   snippet?: string;
+  // What the chat model said when asked to describe the photo.
+  description?: string;
   highlights?: [number, number][];
   page?: number;
   startMs?: number;
@@ -47,11 +49,20 @@ export type PlanOp = {
   checked: boolean;
 };
 
+export type PlanResult = {
+  moved: number;
+  failed: number;
+  // The first thing that went wrong, in plain words, for the card.
+  firstError?: string;
+};
+
 export type FilePlan = {
   ops: PlanOp[];
   destination: string;
-  state: 'pending' | 'moved' | 'cancelled' | 'undone';
+  // 'failed' means nothing could be moved; 'moved' can still carry a few failures in `result`.
+  state: 'pending' | 'moved' | 'failed' | 'cancelled' | 'undone';
   batchId?: string;
+  result?: PlanResult;
 };
 
 export type ReceiptTotal = {

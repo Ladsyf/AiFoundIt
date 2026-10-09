@@ -7,6 +7,7 @@ import symbolsRegular from 'expo-symbols/androidWeights/regular';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ModelsProvider } from '@/features/models/models-store';
 import { HistoryDrawer } from '@/features/search/components/history-drawer';
 import { SearchProvider } from '@/features/search/store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -43,25 +44,27 @@ export default function RootLayout() {
             border: theme.outlineVariant,
           },
         }}>
-        <SearchProvider>
-          <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-          <Drawer
-            drawerContent={({ navigation }) => <HistoryDrawer onClose={() => navigation.closeDrawer()} />}
-            screenOptions={{
-              headerShown: false,
-              drawerType: 'front',
-              overlayColor: theme.scrim,
-              drawerStyle: {
-                backgroundColor: theme.surfaceContainerLow,
-                borderTopRightRadius: 16,
-                borderBottomRightRadius: 16,
-                width: 320,
-              },
-            }}>
-            <Drawer.Screen name="index" />
-            <Drawer.Screen name="settings" />
-          </Drawer>
-        </SearchProvider>
+        <ModelsProvider>
+          <SearchProvider>
+            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+            <Drawer
+              drawerContent={({ navigation }) => <HistoryDrawer onClose={() => navigation.closeDrawer()} />}
+              screenOptions={{
+                headerShown: false,
+                drawerType: 'front',
+                overlayColor: theme.scrim,
+                drawerStyle: {
+                  backgroundColor: theme.surfaceContainerLow,
+                  borderTopRightRadius: 16,
+                  borderBottomRightRadius: 16,
+                  width: 320,
+                },
+              }}>
+              <Drawer.Screen name="index" />
+              <Drawer.Screen name="settings" />
+            </Drawer>
+          </SearchProvider>
+        </ModelsProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

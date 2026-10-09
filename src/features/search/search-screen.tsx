@@ -5,6 +5,7 @@ import { FlatList, Keyboard, KeyboardAvoidingView, ScrollView, StyleSheet, View 
 import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Banner } from '@/components/ui/banner';
 import { Snackbar } from '@/components/ui/snackbar';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { AssistantTurn } from '@/features/search/components/assistant-turn';
@@ -19,7 +20,6 @@ import { useSearch } from '@/features/search/store';
 import type { Message, SearchResult } from '@/features/search/types';
 import { useTheme } from '@/hooks/use-theme';
 
-const BACKEND_LABEL: Record<string, string> = { gpu: 'GPU', cpu: 'CPU', none: 'no model' };
 
 export function SearchScreen() {
   const theme = useTheme();
@@ -62,7 +62,10 @@ export function SearchScreen() {
       />
     );
 
-  const backend = `embedder on ${BACKEND_LABEL[store.backends.embedder] ?? store.backends.embedder}`;
+  const backend =
+    store.backends.embedder === 'none'
+      ? 'matching words only'
+      : `search model on ${store.backends.embedder.toUpperCase()}`;
 
   return (
     <View style={[styles.root, { backgroundColor: theme.surface, paddingTop: insets.top }]}>
@@ -72,6 +75,13 @@ export function SearchScreen() {
         onNewChat={store.newChat}
         canStartNew={conversation !== null}
       />
+      {store.isMock && (
+        <View style={styles.notice}>
+          <Banner>
+            Demo mode: these are sample files. The on-device search engine only runs in the Android app build.
+          </Banner>
+        </View>
+      )}
       {granted && store.indexing && (
         <IndexStatus indexed={store.indexed} total={store.indexTotal} backend={backend} />
       )}
@@ -140,6 +150,10 @@ const styles = StyleSheet.create({
   },
   flexSpacer: {
     flex: 1,
+  },
+  notice: {
+    paddingHorizontal: Spacing.four,
+    paddingBottom: Spacing.two,
   },
   list: {
     paddingHorizontal: Spacing.four,

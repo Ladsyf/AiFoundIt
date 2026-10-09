@@ -1,12 +1,14 @@
 import { Image } from 'expo-image';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Icon } from '@/components/ui/icon';
+import { Icon, type IconName } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Radius, Spacing } from '@/constants/theme';
 import type { FilePreview } from '@/features/search/types';
 import { useTheme } from '@/hooks/use-theme';
 import { formatDuration } from '@/lib/format';
+import { native } from '@/lib/native';
 
 type Props = {
   preview: FilePreview;
@@ -27,6 +29,54 @@ function TimeChip({ ms }: { ms: number }) {
   );
 }
 
+// A picture or video frame. The saved thumbnail can disappear (Android clears caches), so when it fails to
+// load it is made again from the file once; if that fails too, a plain icon is shown.
+function MediaThumb({
+  thumbnailPath,
+  sourcePath,
+  icon,
+  iconSize,
+}: {
+  thumbnailPath?: string;
+  sourcePath?: string;
+  icon: IconName;
+  iconSize: number;
+}) {
+  const theme = useTheme();
+  const [path, setPath] = useState(thumbnailPath);
+  const [retried, setRetried] = useState(false);
+
+  const onError = () => {
+    if (retried || !sourcePath) {
+      setPath(undefined);
+      return;
+    }
+    setRetried(true);
+    native
+      .thumbnail(sourcePath, { size: 384 })
+      .then((made) => setPath(made ?? undefined))
+      .catch(() => setPath(undefined));
+  };
+
+  if (!path) {
+    return (
+      <View style={styles.center}>
+        <Icon name={icon} size={iconSize} color={theme.onSurfaceVariant} />
+      </View>
+    );
+  }
+  return (
+    <Image
+      source={{ uri: fileUri(path) }}
+      style={styles.fill}
+      contentFit="cover"
+      transition={180}
+      recyclingKey={path}
+      onError={onError}
+    />
+  );
+}
+
 export function FileThumbnail({ preview, large }: Props) {
   const theme = useTheme();
   const scale = large ? 1.35 : 1;
@@ -38,37 +88,25 @@ export function FileThumbnail({ preview, large }: Props) {
     case 'image':
       return (
         <View style={[styles.frame, styles.flush, { backgroundColor: theme.surfaceContainerHigh }]}>
-          {preview.thumbnailPath ? (
-            <Image
-              source={{ uri: fileUri(preview.thumbnailPath) }}
-              style={styles.fill}
-              contentFit="cover"
-              transition={180}
-              recyclingKey={preview.thumbnailPath}
-            />
-          ) : (
-            <View style={styles.center}>
-              <Icon name="photo" size={28 * scale} color={theme.onSurfaceVariant} />
-            </View>
-          )}
+          <MediaThumb
+            key={preview.thumbnailPath ?? preview.sourcePath}
+            thumbnailPath={preview.thumbnailPath}
+            sourcePath={preview.sourcePath}
+            icon="photo"
+            iconSize={28 * scale}
+          />
         </View>
       );
     case 'video':
       return (
         <View style={[styles.frame, styles.flush, { backgroundColor: theme.surfaceContainerHigh }]}>
-          {preview.thumbnailPath ? (
-            <Image
-              source={{ uri: fileUri(preview.thumbnailPath) }}
-              style={styles.fill}
-              contentFit="cover"
-              transition={180}
-              recyclingKey={preview.thumbnailPath}
-            />
-          ) : (
-            <View style={styles.center}>
-              <Icon name="videocam" size={28 * scale} color={theme.onSurfaceVariant} />
-            </View>
-          )}
+          <MediaThumb
+            key={preview.thumbnailPath ?? preview.sourcePath}
+            thumbnailPath={preview.thumbnailPath}
+            sourcePath={preview.sourcePath}
+            icon="videocam"
+            iconSize={28 * scale}
+          />
           {preview.durationMs ? <TimeChip ms={preview.durationMs} /> : null}
         </View>
       );

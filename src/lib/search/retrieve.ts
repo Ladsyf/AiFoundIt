@@ -12,7 +12,18 @@ import { bytesToFloat32, cosineSimilarity, float32ToBytes } from '@/lib/vector';
 const RRF_K = 60;
 const TOP_CHUNKS = 50;
 const TOP_FILES = 10;
+// Cosine similarity limits for a file found only by meaning (its words did not match). sqlite-vec
+// reports distance = 1 - similarity. Text-to-image similarity is much lower than text-to-text, so these
+// start low and are tightened by looking at real numbers: debug builds log them (see retrieve below).
 const VEC_MIN_SIMILARITY = 0.12;
+// A vector-only hit must also be at least this fraction of the best vector hit, which trims the long tail.
+const VEC_KEEP_OF_BEST = 0.6;
+
+function vecPasses(distance: number | undefined, bestSimilarity: number): boolean {
+  if (distance === undefined) return false;
+  const similarity = 1 - distance;
+  return similarity >= VEC_MIN_SIMILARITY && similarity >= bestSimilarity * VEC_KEEP_OF_BEST;
+}
 
 export type RetrievedFile = {
   item: FileItem;
@@ -112,8 +123,7 @@ function passesFilters(row: FileRow, plan: QueryPlan): boolean {
   return true;
 }
 
-// Queries that are pure filters ("screenshots", "photos from last week") produce
-// no FTS terms, so ranked retrieval comes back empty — browse files directly.
+// Lists the files that pass the plan's filters (kind, screenshot, dates, category), newest first.
 async function browseFallback(plan: QueryPlan): Promise<RetrievedFile[]> {
   const conds: string[] = [];
   const args: (string | number)[] = [];
@@ -154,6 +164,13 @@ async function browseFallback(plan: QueryPlan): Promise<RetrievedFile[]> {
 }
 
 export async function retrieve(plan: QueryPlan): Promise<RetrievedFile[]> {
+  // A question with no words to match ("screenshots", "photos from last week") is only a filter, so list the
+  // files that pass it, newest first. Ranking by meaning would hand back unrelated files for such a question.
+  if (plan.terms.length === 0) {
+    const browsed = await browseFallback(plan);
+    if (browsed.length > 0) return browsed;
+  }
+
   const db = await getDb();
   const [fts, vec] = await Promise.all([ftsRank(plan), vecRank(plan)]);
 
@@ -175,7 +192,20 @@ export async function retrieve(plan: QueryPlan): Promise<RetrievedFile[]> {
     if (best) files.set(fileId, { score: fs.score, best, distance: fs.distance });
   }
 
-  if (files.size === 0) return browseFallback(plan);
+  const bestSimilarity = [...vec.values()].reduce(
+    (best, v) => Math.max(best, v.distance === undefined ? 0 : 1 - v.distance),
+    0,
+  );
+  if (__DEV__) {
+    const top = [...vec.values()]
+      .slice(0, 8)
+      .map((v) => (v.distance === undefined ? '?' : (1 - v.distance).toFixed(3)))
+      .join(' ');
+    console.log(`[search] "${plan.queryEn}" keyword hits ${fts.size}, vector hits ${vec.size}, best similarities: ${top}`);
+  }
+
+  // Words were asked for and nothing matched them: say so, instead of listing files that merely pass a filter.
+  if (files.size === 0) return [];
 
   const rows = new Map((await fileRowsByIds(db, [...files.keys()])).map((r) => [r.id, r]));
   const lower = plan.terms;
@@ -195,7 +225,7 @@ export async function retrieve(plan: QueryPlan): Promise<RetrievedFile[]> {
       score += 0.004 * Math.exp(-ageDays / 90);
       return { id, row, entry, score };
     })
-    .filter(({ entry }) => fts.has(entry.best.chunkId) || (entry.distance !== undefined && entry.distance < 0.88))
+    .filter(({ entry }) => fts.has(entry.best.chunkId) || vecPasses(entry.distance, bestSimilarity))
     .sort((a, b) => b.score - a.score)
     .slice(0, TOP_FILES);
 

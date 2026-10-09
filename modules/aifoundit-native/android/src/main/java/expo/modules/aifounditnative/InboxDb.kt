@@ -7,6 +7,13 @@ import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONArray
 import org.json.JSONObject
 
+/**
+ * Staging area between the native pipeline and the JS database.
+ *  - inbox:      one row per scanned file, drained by JS and deleted once merged.
+ *  - scan_state: size:mtime fingerprint per path, saved together with each inbox row so a
+ *                cancelled or killed scan resumes where it stopped.
+ *  - meta:       small key/value store (scan and model settings the background worker needs).
+ */
 class InboxDb(ctx: Context) : SQLiteOpenHelper(ctx, "aifoundit_inbox.db", null, 1) {
 
   override fun onCreate(db: SQLiteDatabase) {
@@ -40,48 +47,69 @@ class InboxDb(ctx: Context) : SQLiteOpenHelper(ctx, "aifoundit_inbox.db", null, 
 
   override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
 
-  fun stage(item: Map<String, Any?>) {
-    val v = ContentValues().apply {
-      put("op", item["op"] as? String ?: "upsert")
-      put("path", item["path"] as? String)
-      put("uri", item["uri"] as? String)
-      put("name", item["name"] as? String)
-      put("folder", item["folder"] as? String)
-      put("ext", item["ext"] as? String)
-      put("mime", item["mime"] as? String)
-      put("kind", item["kind"] as? String)
-      put("size", item["size"] as? Long ?: 0L)
-      put("modifiedAt", item["modifiedAt"] as? Long ?: 0L)
-      item["takenAt"]?.let { put("takenAt", it as Long) }
-      item["width"]?.let { put("width", it as Int) }
-      item["height"]?.let { put("height", it as Int) }
-      item["durationMs"]?.let { put("durationMs", it as Long) }
-      put("isScreenshot", if (item["isScreenshot"] == true) 1 else 0)
-      put("labels", JSONArray(item["labels"] as? List<*> ?: emptyList<Any>()).toString())
-      item["thumbnailPath"]?.let { put("thumbnailPath", it as String) }
-      put("chunks", JSONArray(item["chunks"] as? List<*> ?: emptyList<Any>()).toString())
-      item["error"]?.let { put("error", it as String) }
+  private fun values(item: Map<String, Any?>): ContentValues = ContentValues().apply {
+    put("op", item["op"] as? String ?: "upsert")
+    put("path", item["path"] as? String)
+    put("uri", item["uri"] as? String)
+    put("name", item["name"] as? String)
+    put("folder", item["folder"] as? String)
+    put("ext", item["ext"] as? String)
+    put("mime", item["mime"] as? String)
+    put("kind", item["kind"] as? String)
+    put("size", item["size"] as? Long ?: 0L)
+    put("modifiedAt", item["modifiedAt"] as? Long ?: 0L)
+    item["takenAt"]?.let { put("takenAt", it as Long) }
+    item["width"]?.let { put("width", it as Int) }
+    item["height"]?.let { put("height", it as Int) }
+    item["durationMs"]?.let { put("durationMs", it as Long) }
+    put("isScreenshot", if (item["isScreenshot"] == true) 1 else 0)
+    put("labels", JSONArray(item["labels"] as? List<*> ?: emptyList<Any>()).toString())
+    item["thumbnailPath"]?.let { put("thumbnailPath", it as String) }
+    put("chunks", JSONArray(item["chunks"] as? List<*> ?: emptyList<Any>()).toString())
+    item["error"]?.let { put("error", it as String) }
+  }
+
+  /** Stages one item and, when [fingerprint] is given, remembers it in the same transaction. */
+  fun stage(item: Map<String, Any?>, fingerprint: String? = null) {
+    val db = writableDatabase
+    db.beginTransaction()
+    try {
+      db.insert("inbox", null, values(item))
+      val path = item["path"] as? String
+      if (fingerprint != null && path != null) {
+        db.execSQL("INSERT OR REPLACE INTO scan_state(path, fingerprint) VALUES (?, ?)", arrayOf<Any>(path, fingerprint))
+      }
+      db.setTransactionSuccessful()
+    } finally {
+      db.endTransaction()
     }
-    writableDatabase.insert("inbox", null, v)
   }
 
   fun stageDelete(path: String) {
-    val v = ContentValues().apply {
-      put("op", "delete")
-      put("path", path)
-      put("uri", "")
-      put("name", path.substringAfterLast('/'))
-      put("folder", path.substringBeforeLast('/', ""))
-      put("ext", "")
-      put("mime", "")
-      put("kind", "text")
-      put("size", 0L)
-      put("modifiedAt", 0L)
-      put("isScreenshot", 0)
-      put("labels", "[]")
-      put("chunks", "[]")
+    val db = writableDatabase
+    db.beginTransaction()
+    try {
+      val v = ContentValues().apply {
+        put("op", "delete")
+        put("path", path)
+        put("uri", "")
+        put("name", path.substringAfterLast('/'))
+        put("folder", path.substringBeforeLast('/', ""))
+        put("ext", "")
+        put("mime", "")
+        put("kind", "text")
+        put("size", 0L)
+        put("modifiedAt", 0L)
+        put("isScreenshot", 0)
+        put("labels", "[]")
+        put("chunks", "[]")
+      }
+      db.insert("inbox", null, v)
+      db.execSQL("DELETE FROM scan_state WHERE path = ?", arrayOf<Any>(path))
+      db.setTransactionSuccessful()
+    } finally {
+      db.endTransaction()
     }
-    writableDatabase.insert("inbox", null, v)
   }
 
   fun drain(limit: Int): List<Map<String, Any?>> {
@@ -134,22 +162,39 @@ class InboxDb(ctx: Context) : SQLiteOpenHelper(ctx, "aifoundit_inbox.db", null, 
     return out
   }
 
-  fun saveScanState(state: Map<String, String>) {
-    writableDatabase.run {
-      beginTransaction()
-      try {
-        delete("scan_state", null, null)
-        state.forEach { (path, fp) ->
-          insert("scan_state", null, ContentValues().apply {
-            put("path", path)
-            put("fingerprint", fp)
-          })
-        }
-        setTransactionSuccessful()
-      } finally {
-        endTransaction()
-      }
+  /** Forgets every fingerprint and pending row: the next scan treats all files as new. */
+  fun reset() {
+    val db = writableDatabase
+    db.beginTransaction()
+    try {
+      db.execSQL("DELETE FROM inbox")
+      db.execSQL("DELETE FROM scan_state")
+      db.setTransactionSuccessful()
+    } finally {
+      db.endTransaction()
     }
+  }
+
+  /** Forgets the fingerprints of these files, so the next scan treats them as new. */
+  fun forget(paths: Collection<String>) {
+    if (paths.isEmpty()) return
+    val db = writableDatabase
+    db.beginTransaction()
+    try {
+      for (p in paths) db.execSQL("DELETE FROM scan_state WHERE path = ?", arrayOf<Any>(p))
+      db.setTransactionSuccessful()
+    } finally {
+      db.endTransaction()
+    }
+  }
+
+  fun getMeta(key: String): String? =
+    readableDatabase.rawQuery("SELECT value FROM meta WHERE key = ?", arrayOf(key)).use { c ->
+      if (c.moveToFirst()) c.getString(0) else null
+    }
+
+  fun putMeta(key: String, value: String) {
+    writableDatabase.execSQL("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", arrayOf<Any>(key, value))
   }
 
   private fun jsonArrayToList(raw: String?): List<Map<String, Any?>> {

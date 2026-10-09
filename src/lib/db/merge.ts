@@ -8,20 +8,20 @@ export const DRAIN_BATCH = 50;
 
 type OldChunk = { id: number; text: string | null };
 
-async function removeChunks(db: SQLiteDatabase, fileId: number) {
+export async function removeChunks(db: SQLiteDatabase, fileId: number) {
   const old = await db.getAllAsync<OldChunk>('SELECT id, text FROM chunks WHERE file_id = ?', [fileId]);
   for (const c of old) {
-    await db.runAsync('INSERT INTO chunks_fts(chunks_fts, rowid, text) VALUES (?, ?, ?)', [
-      'delete',
-      c.id,
-      c.text ?? '',
-    ]);
+    // Only chunks with words were added to the keyword index (see mergeItem). Telling an external-content
+    // FTS table to forget a row it never held corrupts its index, so picture chunks are skipped here.
+    if (c.text) {
+      await db.runAsync('INSERT INTO chunks_fts(chunks_fts, rowid, text) VALUES (?, ?, ?)', ['delete', c.id, c.text]);
+    }
     if (vecAvailable) await db.runAsync('DELETE FROM chunks_vec WHERE rowid = ?', [c.id]);
   }
   await db.runAsync('DELETE FROM chunks WHERE file_id = ?', [fileId]);
 }
 
-async function deleteFileByPath(db: SQLiteDatabase, path: string) {
+export async function deleteFileByPath(db: SQLiteDatabase, path: string) {
   const row = await db.getFirstAsync<{ id: number }>('SELECT id FROM files WHERE path = ?', [path]);
   if (!row) return;
   await removeChunks(db, row.id);
@@ -82,6 +82,14 @@ async function mergeItem(db: SQLiteDatabase, item: Parameters<typeof inboxToRows
       await db.runAsync('INSERT INTO chunks_vec(rowid, embedding) VALUES (?, ?)', [chunkId, c.embedding]);
     }
   }
+  // A description the person asked for earlier survives re-indexing (as words; the vector comes back with the next Describe).
+  if (existing) {
+    const kept = await db.getFirstAsync<{ description: string | null }>('SELECT description FROM files WHERE id = ?', [fileId]);
+    if (kept?.description) {
+      const ins = await db.runAsync('INSERT INTO chunks (file_id, kind, text) VALUES (?,?,?)', [fileId, 'description', kept.description]);
+      await db.runAsync('INSERT INTO chunks_fts(rowid, text) VALUES (?, ?)', [ins.lastInsertRowId, kept.description]);
+    }
+  }
   for (const l of rows.labels) {
     await db.runAsync('INSERT INTO labels (file_id, label, confidence) VALUES (?,?,?)', [
       fileId, l.label, l.confidence,
@@ -103,22 +111,63 @@ async function mergeItem(db: SQLiteDatabase, item: Parameters<typeof inboxToRows
   );
 }
 
-// Drains the native inbox into the main DB. Returns rows merged so callers can
-// refresh caches and progress UI.
-export async function mergeInbox(): Promise<{ merged: number; deleted: number }> {
+export type MergeResult = { merged: number; deleted: number; failed: number };
+
+// Drains the native inbox into the main DB. Each file is merged inside its own savepoint, so one
+// bad file is skipped (and counted) instead of blocking every file behind it.
+export async function mergeInbox(): Promise<MergeResult> {
   const database = await getDb();
   let merged = 0;
   let deleted = 0;
+  let failed = 0;
 
   for (;;) {
     const items = await native.drainInbox(DRAIN_BATCH);
     if (items.length === 0) break;
     await database.withTransactionAsync(async () => {
-      for (const item of items) await mergeItem(database, item);
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const savepoint = `merge_item_${i}`;
+        await database.execAsync(`SAVEPOINT ${savepoint}`);
+        try {
+          await mergeItem(database, item);
+          await database.execAsync(`RELEASE ${savepoint}`);
+          if (item.op === 'delete') deleted++;
+          else merged++;
+        } catch (e) {
+          await database.execAsync(`ROLLBACK TO ${savepoint}`);
+          await database.execAsync(`RELEASE ${savepoint}`);
+          failed++;
+          console.warn('[merge] skipped', item.path, e instanceof Error ? e.message : e);
+        }
+      }
     });
     await native.ackInbox(items.map((i) => i.id));
-    merged += items.filter((i) => i.op === 'upsert').length;
-    deleted += items.filter((i) => i.op === 'delete').length;
   }
-  return { merged, deleted };
+  return { merged, deleted, failed };
+}
+
+// Several things ask for a merge (a scan reporting progress, the app starting, a scan ending).
+// This runs one at a time, and asks again once if more was requested while it ran.
+let running: Promise<void> | null = null;
+let again = false;
+
+export function requestMerge(onDone?: (result: MergeResult) => void): Promise<void> {
+  if (running) {
+    again = true;
+    return running;
+  }
+  running = (async () => {
+    do {
+      again = false;
+      try {
+        onDone?.(await mergeInbox());
+      } catch (e) {
+        console.warn('[merge] failed', e instanceof Error ? e.message : e);
+      }
+    } while (again);
+  })().finally(() => {
+    running = null;
+  });
+  return running;
 }

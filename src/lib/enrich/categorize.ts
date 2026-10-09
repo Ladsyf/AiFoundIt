@@ -1,3 +1,5 @@
+import { hasWord } from '@/lib/text';
+
 export type Category = 'receipt' | 'id' | 'school' | 'work' | 'screenshot' | 'meme' | 'document';
 
 export const CATEGORIES: Category[] = ['receipt', 'id', 'school', 'work', 'screenshot', 'meme', 'document'];
@@ -106,7 +108,12 @@ export function categorize(seed: CategorizeSeed): Category | null {
 
   for (const [category, words] of Object.entries(CATEGORY_WORDS) as [Category, string[]][]) {
     let score = 0;
-    for (const w of words) if (haystack.includes(w)) score += w.includes(' ') ? 2 : 1;
+    // A single word must stand alone ("tin" is not in "meeting"); a phrase can match anywhere.
+    for (const w of words) {
+      const phrase = /[^a-z0-9]/.test(w);
+      const found = phrase ? haystack.includes(w) : hasWord(haystack, w);
+      if (found) score += w.includes(' ') ? 2 : 1;
+    }
     if (score > 0) scores.set(category, score);
   }
 

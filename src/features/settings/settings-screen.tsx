@@ -1,174 +1,179 @@
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, AppState, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Banner } from '@/components/ui/banner';
 import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
+import { IconButton } from '@/components/ui/icon-button';
 import { Text } from '@/components/ui/text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { ModelsPanel } from '@/features/models/models-panel';
 import { useSearch } from '@/features/search/store';
+import { ScanFolders } from '@/features/settings/scan-folders';
+import { Row, Section, SwitchRow } from '@/features/settings/settings-parts';
 import { useTheme } from '@/hooks/use-theme';
-import { deleteIndex, indexSizeBytes } from '@/lib/db/files';
+import { isBackgroundEnabled } from '@/lib/background';
+import { indexSizeBytes } from '@/lib/db/files';
 import { formatBytes } from '@/lib/format';
-import { deleteModelFile, detectModelConfig, importModelFile, type ModelFile } from '@/lib/models';
 import { native } from '@/lib/native';
-import { addScanRule, listScanRules, removeScanRule, type ScanRule } from '@/lib/scan-config';
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  const theme = useTheme();
-  return (
-    <View style={styles.section}>
-      <Text variant="titleSmall" color="onSurfaceVariant">
-        {title}
-      </Text>
-      <View style={[styles.card, { backgroundColor: theme.surfaceContainerLow, borderColor: theme.outlineVariant }]}>
-        {children}
-      </View>
-    </View>
-  );
-}
+const BACKEND_LABEL: Record<string, string> = { gpu: 'Running on the GPU', cpu: 'Running on the CPU', none: 'Not loaded' };
+const number = new Intl.NumberFormat('en-GB');
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <Text variant="bodyMedium" style={styles.flex}>
-        {label}
-      </Text>
-      <Text variant="bodyMedium" color="onSurfaceVariant">
-        {value}
-      </Text>
-    </View>
-  );
+function readAllFilesAccess(): boolean {
+  try {
+    return native.hasAllFilesAccess();
+  } catch {
+    return false;
+  }
 }
 
 export function SettingsScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const store = useSearch();
-  const [models, setModels] = useState<ModelFile[]>([]);
-  const [rules, setRules] = useState<ScanRule[]>([]);
   const [bytesSent, setBytesSent] = useState<number | null>(null);
+  const [downloaded, setDownloaded] = useState<number | null>(null);
   const [indexSize, setIndexSize] = useState(0);
-  const [note, setNote] = useState<string | null>(null);
+  const [background, setBackground] = useState(false);
+  const [allFiles, setAllFiles] = useState(readAllFilesAccess);
 
   const reload = useCallback(async () => {
-    const { files } = await detectModelConfig();
-    setModels(files);
-    setRules(await listScanRules().catch(() => []));
     setIndexSize(await indexSizeBytes().catch(() => 0));
     setBytesSent(await native.bytesSent().catch(() => null));
+    const traffic = await native.downloadTraffic().catch(() => null);
+    setDownloaded(traffic ? traffic.received : null);
+    setBackground(await isBackgroundEnabled());
   }, []);
 
+  // Numbers on this screen are refreshed when it opens and whenever the index changes.
   useEffect(() => {
     const t = setTimeout(() => void reload(), 0);
     return () => clearTimeout(t);
-  }, [reload]);
+  }, [reload, store.fileCount, store.indexing]);
 
-  const exclude = async (path: string) => {
-    await addScanRule(path, 'exclude');
-    await reload();
-  };
+  // Coming back from the system settings screen, check the access again.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') setAllFiles(readAllFilesAccess());
+    });
+    return () => sub.remove();
+  }, []);
+
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  const confirmDelete = () =>
+    Alert.alert('Delete the index?', 'Your files are not touched. Search will be empty until you scan again.', [
+      { text: 'Keep it', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => void store.deleteIndex().then(reload) },
+    ]);
+
+  const scanLabel =
+    store.indexing && store.indexTotal > 0
+      ? `${number.format(store.indexed)} of ${number.format(store.indexTotal)}`
+      : store.indexing
+        ? 'Starting…'
+        : null;
 
   return (
     <ScrollView
       style={{ backgroundColor: theme.surface }}
-      contentContainerStyle={[styles.root, { paddingTop: insets.top + Spacing.four, paddingBottom: insets.bottom + Spacing.six }]}>
-      <Text variant="headlineSmall" accessibilityRole="header" style={styles.title}>
-        Settings
-      </Text>
+      contentContainerStyle={[styles.root, { paddingTop: insets.top + Spacing.two, paddingBottom: insets.bottom + Spacing.six }]}>
+      <View style={styles.header}>
+        <IconButton icon="arrow_back" label="Back to search" onPress={goBack} />
+        <Text variant="headlineSmall" accessibilityRole="header">
+          Settings
+        </Text>
+      </View>
 
-      <Section title="Models">
-        <Row label="Embedder" value={store.backends.embedder === 'none' ? 'not loaded' : `on ${store.backends.embedder}`} />
-        <Row label="Chat model" value={store.backends.llm === 'none' ? 'not loaded' : `on ${store.backends.llm}`} />
-        {models.map((m) => (
-          <View key={m.path} style={styles.row}>
-            <Text variant="bodyMedium" numberOfLines={1} style={styles.flex}>
-              {m.name} · {formatBytes(m.size)}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Delete ${m.name}`}
-              onPress={() => void deleteModelFile(m.path).then(reload)}
-              style={styles.iconBtn}>
-              <Icon name="delete" size={20} color={theme.onSurfaceVariant} />
-            </Pressable>
-          </View>
-        ))}
-        {models.length === 0 && (
-          <Text variant="bodySmall" color="onSurfaceVariant">
-            No models found. Push .litertlm files with adb, or import one.
-          </Text>
-        )}
-        <View style={styles.rowButtons}>
-          <Button
-            label="Import model"
-            variant="tonal"
-            icon="download"
-            onPress={() =>
-              void importModelFile()
-                .then((f) => setNote(f ? `Imported ${f.name}` : null))
-                .then(reload)
-            }
-          />
-        </View>
+      {store.isMock && (
+        <Banner>
+          Demo mode: this build has no on-device engine, so you are looking at sample files and the models below do
+          nothing.
+        </Banner>
+      )}
+
+      <Section title="AI models">
+        <ModelsPanel
+          status={{
+            embedder: BACKEND_LABEL[store.backends.embedder],
+            llm: store.backends.llmLoading ? 'Loading…' : BACKEND_LABEL[store.backends.llm],
+          }}
+        />
       </Section>
 
       <Section title="Scan folders">
-        <Text variant="bodySmall" color="onSurfaceVariant">
-          Whole-phone scan with default exclusions. Excluded folders are removed from results after the next rescan
-          and are never opened.
-        </Text>
-        {rules.map((r) => (
-          <View key={r.id} style={styles.row}>
-            <Text variant="bodyMedium" numberOfLines={1} style={styles.flex}>
-              {r.mode === 'exclude' ? 'Excluded' : 'Included'} · {r.path}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Remove rule for ${r.path}`}
-              onPress={() => void removeScanRule(r.id).then(reload)}
-              style={styles.iconBtn}>
-              <Icon name="close" size={20} color={theme.onSurfaceVariant} />
-            </Pressable>
-          </View>
-        ))}
-        <View style={styles.rowButtons}>
-          <Button label="Exclude Private" variant="text" onPress={() => void exclude('Private')} />
-          <Button label="Exclude Bank" variant="text" onPress={() => void exclude('Bank')} />
-          <Button label="Exclude .Statuses" variant="text" onPress={() => void exclude('.Statuses')} />
-        </View>
+        <ScanFolders />
       </Section>
 
       <Section title="Index">
-        <Row label="Files indexed" value={`${store.fileCount}`} />
+        <Row label="Files indexed" value={number.format(store.fileCount)} />
         <Row label="Index size" value={formatBytes(indexSize)} />
-        <View style={styles.rowButtons}>
-          <Button label="Rescan" variant="tonal" icon="refresh" onPress={() => void store.startScan().then(reload)} />
+        {scanLabel && <Row label="Scanning" value={scanLabel} />}
+        <View style={styles.actions}>
+          <Button
+            label="Rescan"
+            variant="tonal"
+            icon="refresh"
+            disabled={store.indexing || store.access !== 'granted'}
+            onPress={() => void store.startScan().then(reload)}
+            accessibilityHint="Looks for new and changed files"
+          />
           <Button
             label="Delete index"
             variant="text"
-            onPress={() =>
-              void deleteIndex()
-                .then(store.refreshCounts)
-                .then(reload)
-                .then(() => setNote('Index deleted'))
-            }
+            disabled={store.indexing}
+            onPress={confirmDelete}
+            accessibilityHint="Empties the search index. Your files are not touched"
           />
         </View>
       </Section>
 
-      <Section title="Privacy">
-        <Row label="Bytes sent by this app" value={bytesSent === null ? 'unavailable' : `${bytesSent}`} />
-        <Text variant="bodySmall" color="onSurfaceVariant">
-          Files, text and vectors never leave this phone. The only network traffic is downloading models.
-        </Text>
+      <Section title="Background">
+        <SwitchRow
+          label="Keep the index up to date"
+          hint="Checks for new photos, recordings and documents while the phone charges, and when a new photo is taken. Android may delay it."
+          value={background}
+          onChange={(on) => {
+            setBackground(on);
+            void store.setBackgroundIndexing(on);
+          }}
+        />
+        <View style={styles.actions}>
+          <Button
+            label="Battery settings"
+            variant="text"
+            onPress={() => void native.openBatterySettings()}
+            accessibilityHint="If Android stops background work, set AiFoundIt to unrestricted"
+          />
+        </View>
       </Section>
 
-      {note && (
-        <Text variant="bodySmall" color="onSurfaceVariant" style={styles.note}>
-          {note}
+      <Section title="Access">
+        <Row label="All files access" value={allFiles ? 'Allowed' : 'Not allowed'} />
+        <Text variant="bodySmall" color="onSurfaceVariant">
+          Lets AiFoundIt read PDFs and other documents anywhere on the phone. Photos, videos and audio work without it.
         </Text>
-      )}
+        {!allFiles && (
+          <View style={styles.actions}>
+            <Button label="Allow" variant="tonal" onPress={() => void native.openAllFilesAccessSettings()} />
+          </View>
+        )}
+      </Section>
+
+      <Section title="Privacy">
+        <Row label="Sent by this app" value={bytesSent === null ? 'unavailable' : `${number.format(bytesSent)} bytes`} />
+        <Row
+          label="Used by model downloads"
+          value={downloaded === null ? 'unavailable' : formatBytes(downloaded)}
+        />
+        <Text variant="bodySmall" color="onSurfaceVariant">
+          Your files, their text and the search index never leave this phone. The only thing the app downloads is the
+          models you choose. “Sent” counts what this app has sent since it opened, not counting model downloads.
+        </Text>
+      </Section>
     </ScrollView>
   );
 }
@@ -181,35 +186,15 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  title: {
-    paddingHorizontal: Spacing.two,
-  },
-  section: {
-    gap: Spacing.two,
-  },
-  card: {
-    borderWidth: 1,
-    borderRadius: Radius.large,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-  row: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
   },
-  rowButtons: {
+  actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: Spacing.two,
-  },
-  iconBtn: {
-    padding: Spacing.two,
-  },
-  flex: {
-    flex: 1,
-  },
-  note: {
-    textAlign: 'center',
   },
 });

@@ -13,7 +13,7 @@ android {
     versionName "0.1.0"
   }
   kotlinOptions {
-    // tasks-retrieval/litertlm ship Kotlin 2.4 metadata; this module is the
+    // tasks-retrieval and litertlm ship Kotlin 2.4 metadata; this module is the
     // only consumer, so the check is relaxed here rather than bumping the
     // whole app's Kotlin version.
     freeCompilerArgs += ['-Xskip-metadata-version-check']
@@ -26,15 +26,23 @@ android {
       useLegacyPackaging = true
     }
   }
+  testOptions {
+    unitTests {
+      returnDefaultValues = true
+    }
+  }
 }
 
 dependencies {
-  // EmbeddingGemma 2 via MediaPipe Universal Embedder (pulls LiteRT-LM transitively)
-  implementation 'com.google.mediapipe:tasks-retrieval:latest.release'
-  // Gemma chat model via LiteRT-LM — direct API use, kept explicit
-  implementation 'com.google.ai.edge.litertlm:litertlm-android:latest.release'
+  // Versions are pinned so a judge building this repo gets the libraries we tested.
+  // EmbeddingGemma 2 through the MediaPipe Universal Embedder (brings LiteRT-LM along)
+  implementation 'com.google.mediapipe:tasks-retrieval:1.1.0'
+  // Gemma chat models through LiteRT-LM
+  implementation 'com.google.ai.edge.litertlm:litertlm-android:0.18.0'
   implementation 'com.google.mlkit:text-recognition:16.0.1'
   implementation 'com.google.mlkit:image-labeling:17.0.9'
   implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
   implementation 'androidx.work:work-runtime-ktx:2.9.1'
+
+  testImplementation 'junit:junit:4.13.2'
 }

@@ -54,7 +54,9 @@ export async function streamAnswer(
   if (!opts.llmAvailable || results.length === 0) return null;
   const outcome = await generateText(
     { prompt: answerPrompt(query, results), maxTokens: 140, temperature: 0.3 },
-    { timeoutMs: 20_000, onToken: opts.onToken },
+    // Up to 45 s for the first word (the model reads the results first); after that it is never cut off while it
+    // keeps writing.
+    { timeoutMs: 45_000, onToken: opts.onToken },
   );
   if (!outcome.ok || !outcome.text.trim()) return null;
   return outcome.text.trim();

@@ -51,8 +51,23 @@ function HighlightedSnippet({ text, ranges }: { text: string; ranges?: [number, 
 
 export function FileSheet({ file, reason, onClose }: Props) {
   const theme = useTheme();
-  const { showSnackbar } = useSearch();
+  const { showSnackbar, describe, llmConfigured } = useSearch();
   const [busy, setBusy] = useState(false);
+  const [describing, setDescribing] = useState(false);
+  // What the chat model said about this photo just now (a saved description comes with the file).
+  const [described, setDescribed] = useState<{ id: string; text: string } | null>(null);
+  const description = file ? (file.description ?? (described?.id === file.id ? described.text : undefined)) : undefined;
+
+  const describePhoto = async (f: FileItem) => {
+    setDescribing(true);
+    try {
+      const text = await describe(f);
+      if (text) setDescribed({ id: f.id, text });
+      else showSnackbar({ text: 'Could not describe this photo. Choose a chat model that can read photos, like Gemma 4.' });
+    } finally {
+      setDescribing(false);
+    }
+  };
 
   const copyPath = async (f: FileItem) => {
     await Clipboard.setStringAsync(f.path.replace(/^\/storage\/emulated\/\d+\//, 'Internal storage/'));
@@ -122,6 +137,15 @@ export function FileSheet({ file, reason, onClose }: Props) {
             </View>
           )}
 
+          {description && (
+            <View style={[styles.reason, { backgroundColor: theme.surfaceContainerHigh }]}>
+              <Text variant="labelMedium" color="onSurfaceVariant">
+                What the photo shows
+              </Text>
+              <Text variant="bodyMedium">{description}</Text>
+            </View>
+          )}
+
           {file.tags.length > 0 && (
             <View style={styles.tagsRow}>
               {file.tags.slice(0, 6).map((t) => (
@@ -150,6 +174,18 @@ export function FileSheet({ file, reason, onClose }: Props) {
             <Button label="Share" variant="text" icon="share" onPress={() => file && void share(file)} />
             <Button label="Copy path" variant="text" icon="content_copy" onPress={() => file && void copyPath(file)} />
           </View>
+          {file.kind === 'image' && !description && llmConfigured && (
+            <View style={styles.actions}>
+              <Button
+                label={describing ? 'Looking at the photo…' : 'Describe photo'}
+                variant="tonal"
+                icon="auto_awesome"
+                disabled={describing}
+                onPress={() => void describePhoto(file)}
+                accessibilityHint="The chat model looks at the photo and writes what it shows, so the photo is easier to find"
+              />
+            </View>
+          )}
           {busy && <Text variant="bodySmall" color="onSurfaceVariant">Opening…</Text>}
         </View>
       )}

@@ -17,10 +17,18 @@ type Props = {
   onToggle: (opId: string) => void;
 };
 
+const plural = (n: number) => `${n} file${n === 1 ? '' : 's'}`;
+
 const STATUS: Record<Exclude<FilePlan['state'], 'pending'>, (p: FilePlan) => string> = {
-  moved: (p) => `Moved ${p.ops.filter((o) => o.checked).length} files to ${p.destination}.`,
+  moved: (p) => {
+    const moved = p.result?.moved ?? p.ops.filter((o) => o.checked).length;
+    const failed = p.result?.failed ?? 0;
+    const base = `Moved ${plural(moved)} to ${p.destination}.`;
+    return failed > 0 ? `${base} ${plural(failed)} could not be moved${p.result?.firstError ? `: ${p.result.firstError}` : ''}.` : base;
+  },
+  failed: (p) => `Nothing was moved${p.result?.firstError ? `: ${p.result.firstError}` : ''}.`,
   cancelled: () => 'Nothing was moved.',
-  undone: (p) => `Undone. The files are back where they were.`,
+  undone: () => 'Undone. The files are back where they were.',
 };
 
 function baseName(path: string) {
@@ -90,9 +98,11 @@ export function FilePlanCard({ plan, fileById, onConfirm, onCancel, onToggle }: 
       ) : (
         <View style={styles.status} accessibilityLiveRegion="polite">
           <Icon
-            name={plan.state === 'moved' ? 'check_circle' : 'info'}
+            name={plan.state === 'moved' ? 'check_circle' : plan.state === 'failed' ? 'error' : 'info'}
             size={20}
-            color={plan.state === 'moved' ? theme.primary : theme.onSurfaceVariant}
+            color={
+              plan.state === 'moved' ? theme.primary : plan.state === 'failed' ? theme.error : theme.onSurfaceVariant
+            }
           />
           <Text variant="bodyMedium" style={styles.flex}>
             {STATUS[plan.state](plan)}
