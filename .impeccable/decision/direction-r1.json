@@ -1,0 +1,129 @@
+{
+  "title": "Choose the visual world for AiFoundIt search (re-roll 1)",
+  "question": "Fresh set. The roll assigned Pocket Field Notebook. Each preview is a hand-built HTML mock of the chat screen, not a generated image.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Pocket Field Notebook",
+      "kicker": "THE ROLL",
+      "lineage": "Rhodia and Field Notes pocket memo books: orange cover, violet dot grid",
+      "thesis": "A private notebook only you carry. Your questions are entries; found files are taped onto the page.",
+      "palette": ["#E8541E", "#FBFBFD", "#B9B2D6", "#1B1A22"],
+      "materials": ["orange cover stock", "violet dot grid", "a margin rule with timestamps", "tape strips"],
+      "viewport": "Orange cover band as the top app bar. Below it, a pencil-filled index bar, your question as a large entry with its time in the margin, the reply with two taped-in screenshots, and a checklist-style move proposal.",
+      "risk": "The tape can tip into scrapbook kitsch. It has to stay limited to found files.",
+      "raised": [
+        { "from": "signals-instruments-split-flap-concourse", "raise": "Fixed fields: every taped-in file shows the same caption fields in the same order (type · date, then folder)." },
+        { "from": "pop-culture-shelf-streaming-title-card-wall", "raise": "Tapping a file brings it forward and dims the rest of the page, revealing the 'why it matched' note. That is how reasons appear on demand." },
+        { "from": "design-annual-s-plate-section", "raise": "Ink is never pure black and the paper never pure white, so the page reads as printed." },
+        { "from": "brand-identity-canon-saville-catalog-sleeve", "raise": "Nothing is labeled twice: no 'AI' badges and no repeated status chips. The margin timestamp is the only metadata a chat entry gets." }
+      ],
+      "comp": ".impeccable/mocks/decision/notebook.png"
+    },
+    {
+      "id": "model-pick",
+      "label": "Lost Property Counter",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Lost-and-found claim stubs and manila luggage tags",
+      "thesis": "You describe what you lost; the counter hands back a numbered claim ticket with your items tagged.",
+      "palette": ["#1F3B32", "#D9412B", "#EDE3C8", "#F2F4EF"],
+      "materials": ["perforated claim stubs", "manila tags with grommets", "dashed proposal slips"],
+      "viewport": "Each reply is a red claim stub with a number. The files hang below it as manila tags, and a dashed slip proposes shelving them.",
+      "risk": "It's the literal reading of the name 'AiFoundIt', and the joke could wear thin.",
+      "comp": ".impeccable/mocks/decision/claim.png"
+    },
+    {
+      "id": "challenger-wayfinding",
+      "label": "Terminal Yellow Wayfinding",
+      "verdict": "competitive",
+      "lineage": "Airport signage: yellow bands, black humanist type",
+      "thesis": "Every answer is a sign: where your files are, how many, and which way to go.",
+      "palette": ["#FFD100", "#141414", "#F4F4F4", "#2A2A2A"],
+      "materials": ["yellow sign bands", "black pictogram squares", "monumental counts"],
+      "viewport": "A yellow band names the folder and shows the match count at large size. The files sit beneath it, and a move proposal is a second sign.",
+      "case": "Wins on clarity (location and count read instantly), but it's colder for a personal, privacy-focused app.",
+      "risk": "Can feel like a transit app, not a personal one.",
+      "comp": ".impeccable/mocks/decision/wayfinding.png",
+      "hero": "https://impeccable.style/worlds/cards/wayfinding-cartography-signage-terminal-yellow-wayfinding-hero.webp"
+    },
+    {
+      "id": "challenger-wallet",
+      "label": "Jet-Age Ticket Wallet",
+      "verdict": "competitive",
+      "lineage": "Carbon-copy airline coupons",
+      "thesis": "Files are coupons with ruled fields; organizing actions get stamped PENDING, VALIDATED, or VOID, and nothing silently disappears.",
+      "palette": ["#1B2A5C", "#C8102E", "#5B3F8C", "#FFFFFF"],
+      "materials": ["coupon stock", "perforated stubs", "carbon numerals", "rubber stamps"],
+      "viewport": "The files are perforated coupons with date, type, and folder fields. The move proposal is stamped PENDING until you validate it.",
+      "case": "Its stamp system matches 'never auto-delete or move' exactly, but it's a rarer reference for everyday users.",
+      "risk": "The form-heavy layout is dense in long chats.",
+      "comp": ".impeccable/mocks/decision/wallet.png",
+      "hero": "https://impeccable.style/worlds/cards/vernacular-ephemera-jet-age-ticket-wallet-hero.webp"
+    },
+    {
+      "id": "challenger-splitflap",
+      "label": "Split-Flap Board",
+      "verdict": "declined",
+      "lineage": "Rail station departure boards",
+      "thesis": "Results as board rows that flip into place.",
+      "palette": ["#111111", "#FFFFFF", "#FFB000", "#B3261E"],
+      "materials": ["flap faces", "steel frame"],
+      "viewport": "A board of file rows above the composer.",
+      "case": "Loses on both: rows of text hide the thumbnails people use to recognize their files.",
+      "kept": "Columns that never move.",
+      "risk": "Text-only results."
+    },
+    {
+      "id": "challenger-annual",
+      "label": "Design Annual Plates",
+      "verdict": "declined",
+      "lineage": "Printed design annuals with registration marks",
+      "thesis": "Files presented as plates with registration crosshairs.",
+      "palette": ["#F5F4F6", "#16181A", "#DCDDF3", "#C9C7C4"],
+      "materials": ["uncoated stock", "crosshairs", "stamp"],
+      "viewport": "Plate grid with a credits row.",
+      "case": "Loses on both: gallery-like, with nothing everyday about it.",
+      "kept": "Never pure black, never pure white.",
+      "risk": "Precious."
+    },
+    {
+      "id": "challenger-streaming",
+      "label": "Streaming Title Wall",
+      "verdict": "declined",
+      "lineage": "Streaming app rows",
+      "thesis": "Results in horizontal rows; the focused file expands.",
+      "palette": ["#0E0E10", "#FFFFFF", "#E50914"],
+      "materials": ["poster tiles", "row dimming"],
+      "viewport": "Rows of files by type.",
+      "case": "Loses on both: built for browsing, not for finding one file.",
+      "kept": "Focus brings the file forward and dims the rest.",
+      "risk": "Netflix clone."
+    },
+    {
+      "id": "challenger-saville",
+      "label": "Factory Catalog Sleeve",
+      "verdict": "declined",
+      "lineage": "Peter Saville's Factory Records sleeves",
+      "thesis": "Coded labels on matte black.",
+      "palette": ["#0A0A0A", "#FFFFFF", "#FF5A36", "#3CB4E6"],
+      "materials": ["matte black", "color-block codes"],
+      "viewport": "A catalog number instead of a reply line.",
+      "case": "Loses on both: labels encoded as color blocks work against calm clarity.",
+      "kept": "Nothing labeled twice.",
+      "risk": "Cryptic."
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code" },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A standard AI chat app, executed impeccably.",
+    "palette": ["#FFFFFF", "#1F1F1F", "#0B57D0"],
+    "materials": ["chat bubbles", "attachment rows"],
+    "viewport": "The chat layout people already expect, with files as attachment rows.",
+    "risk": "Indistinguishable from Gemini or ChatGPT by design.",
+    "comp": ".impeccable/mocks/decision/canon.png"
+  },
+  "steer": true
+}

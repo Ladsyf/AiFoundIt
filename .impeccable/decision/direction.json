@@ -1,0 +1,151 @@
+{
+  "title": "Choose the visual world for AiFoundIt search",
+  "question": "The roll assigned Contact Sheet & China Marker. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Contact Sheet & China Marker",
+      "kicker": "THE ROLL",
+      "lineage": "Photographers' darkroom contact sheets, marked up with a grease pencil",
+      "thesis": "Each assistant reply is a contact sheet of your own files, with the finds circled in china marker.",
+      "palette": ["#121212", "#F5F6F4", "#FFC72C", "#E8833A"],
+      "materials": ["film rebate strips", "edge-print numerals", "china-marker strokes", "a loupe"],
+      "viewport": "Material 3 top bar and chat composer. The reply is a strip of three frames on a black film rebate; the matching frames get a hand-drawn yellow loop and orange edge print (name · date · source).",
+      "risk": "Documents and audio need authored frame faces so they don't look like second-class photos.",
+      "raised": [
+        { "from": "rw-manual-acetate-tab-board", "raise": "A strict set of marks: circle means match, arrow means proposed move, X means proposed exclusion, crop corners mean selected. No other state decoration." },
+        { "from": "notation-diagram-systems-labanotation", "raise": "Indexing is a pale band across the sheet whose length is exactly the share of files indexed so far: a measured quantity, not a spinner." },
+        { "from": "crouwel-grid-specimen", "raise": "Frames snap to fixed cells and reflow by whole frames only: 3 per strip on a phone, 5 on a tablet." },
+        { "from": "pop-culture-shelf-character-goods-catalog", "raise": "Every frame has the same edge-print fields: name, date, where it came from, and a one-line note on why it matched (shown on demand)." },
+        { "from": "variable-font-specimen", "raise": "A live monospace counter in the edge print, e.g. 12,408 FILES · ON DEVICE." }
+      ],
+      "wireframe": { "cols": 12, "rows": 20, "regions": [
+        { "label": "top app bar · history", "x": 0, "y": 0, "w": 12, "h": 2 },
+        { "label": "index band", "x": 0, "y": 2, "w": 7, "h": 1, "accent": true },
+        { "label": "you: wifi password screenshot", "x": 4, "y": 4, "w": 8, "h": 2 },
+        { "label": "reply line", "x": 0, "y": 7, "w": 9, "h": 1 },
+        { "label": "film strip · 3 frames, finds circled", "x": 0, "y": 8, "w": 12, "h": 5, "accent": true },
+        { "label": "edge print", "x": 0, "y": 13, "w": 12, "h": 1 },
+        { "label": "move proposal · Confirm / Cancel", "x": 0, "y": 15, "w": 12, "h": 2 },
+        { "label": "composer", "x": 0, "y": 18, "w": 12, "h": 2 }
+      ] }
+    },
+    {
+      "id": "model-pick",
+      "label": "Material You, Expressive",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Material 3 Expressive with dynamic color from the user's wallpaper",
+      "thesis": "The assistant takes on your phone's own colors, so it feels like part of the device.",
+      "palette": ["#1D1B20", "#FEF7FF", "#6750A4", "#E8DEF8"],
+      "materials": ["tonal surfaces", "expressive shape morphs", "large rounded file cards"],
+      "viewport": "Large headline greeting, tonal suggestion chips, and found files as large rounded tonal cards inside the reply.",
+      "risk": "Familiar: it sits right next to Gemini and Files by Google, and the brand would mostly disappear into the system.",
+      "wireframe": { "cols": 12, "rows": 20, "regions": [
+        { "label": "top app bar", "x": 0, "y": 0, "w": 12, "h": 2 },
+        { "label": "you", "x": 4, "y": 3, "w": 8, "h": 2 },
+        { "label": "reply", "x": 0, "y": 6, "w": 10, "h": 2 },
+        { "label": "tonal file cards", "x": 0, "y": 8, "w": 12, "h": 6, "accent": true },
+        { "label": "chips", "x": 0, "y": 15, "w": 12, "h": 1 },
+        { "label": "composer", "x": 0, "y": 18, "w": 12, "h": 2 }
+      ] }
+    },
+    {
+      "id": "challenger-monochrome",
+      "label": "Claim & Proof Monochrome",
+      "verdict": "competitive",
+      "lineage": "Neutral-scale software product pages",
+      "thesis": "Every sentence the assistant writes is immediately backed by the file that proves it.",
+      "palette": ["#0E0E0E", "#FAFAFA", "#8A8A8A", "#2F6BFF"],
+      "materials": ["fine neutral scale", "hairline ghost controls", "one accent, used sparingly"],
+      "viewport": "Each assistant sentence is followed by its file proof. Confirm is the only filled control on screen.",
+      "case": "Equal on clarity (sentence plus proof is exactly the chat pattern), but generic for the audience; nothing about it says 'your phone'.",
+      "risk": "Very close to the category standard; easy to mistake for any AI chat app.",
+      "wireframe": { "cols": 12, "rows": 20, "regions": [
+        { "label": "top bar", "x": 0, "y": 0, "w": 12, "h": 2 },
+        { "label": "claim", "x": 0, "y": 4, "w": 10, "h": 1 },
+        { "label": "proof", "x": 0, "y": 5, "w": 12, "h": 4, "accent": true },
+        { "label": "claim", "x": 0, "y": 10, "w": 10, "h": 1 },
+        { "label": "proof", "x": 0, "y": 11, "w": 12, "h": 4 },
+        { "label": "composer", "x": 0, "y": 18, "w": 12, "h": 2 }
+      ] },
+      "hero": "https://impeccable.style/worlds/cards/digital-design-canon-monochrome-product-marketing-hero.webp"
+    },
+    {
+      "id": "challenger-acetate",
+      "label": "Acetate Tab Manual",
+      "verdict": "declined",
+      "lineage": "Boxed-software manuals with acetate overlays",
+      "thesis": "Conversations are tabbed sections; replies sit on clear acetate leaves over a colored board.",
+      "palette": ["#E8632B", "#F2C200", "#2E5BBA", "#EEF0F2"],
+      "materials": ["milk acetate", "colored divider board", "punched holes"],
+      "viewport": "A stepped tab rail for history; the current chat is laid out as acetate leaves.",
+      "case": "Loses on both axes: everyday users don't recognize manuals, and the layered acetate slows down scanning.",
+      "kept": "Its strict, rule-bound set of state marks.",
+      "risk": "Heavy, and reads as a novelty on a phone."
+    },
+    {
+      "id": "challenger-labanotation",
+      "label": "Labanotation Score",
+      "verdict": "declined",
+      "lineage": "Dance notation scores",
+      "thesis": "The conversation as a vertical score read upward, with block length showing duration.",
+      "palette": ["#FFFFFF", "#111111", "#D9D9D9"],
+      "materials": ["score paper", "shaded symbol blocks"],
+      "viewport": "A center staff with user and assistant columns mirrored on either side.",
+      "case": "Loses on both: the encoding is foreign, and chat already has a direction of reading.",
+      "kept": "Geometry that shows an exact quantity (the indexing band).",
+      "risk": "Unreadable without learning the notation."
+    },
+    {
+      "id": "challenger-crouwel",
+      "label": "Crouwel Grid Specimen",
+      "verdict": "declined",
+      "lineage": "Wim Crouwel's grid-constructed type",
+      "thesis": "A visible construction grid that results snap into.",
+      "palette": ["#FFFFFF", "#1A1A1A", "#9EC5FF", "#FF3B1F"],
+      "materials": ["graph-paper hairlines", "cell-built letterforms"],
+      "viewport": "Grid lines behind the chat; results occupy whole cells.",
+      "case": "Loses on both: an insider design reference that doesn't make finding files any clearer.",
+      "kept": "Reflowing by whole cells.",
+      "risk": "Reads as a design-school exercise."
+    },
+    {
+      "id": "challenger-goods",
+      "label": "Character Goods Catalog",
+      "verdict": "declined",
+      "lineage": "Pastel mascot catalogs",
+      "thesis": "Each file category becomes a mascot, with a name plate and a short note.",
+      "palette": ["#FFE3EC", "#DFF3FF", "#FFF4C2", "#FF6FA3"],
+      "materials": ["pastel grounds", "white keylines", "bubble type"],
+      "viewport": "A roster of category mascots above the chat.",
+      "case": "Loses on both: its playfulness contradicts the calm, trustworthy voice.",
+      "kept": "The same fixed set of facts on every item.",
+      "risk": "Undermines privacy trust."
+    },
+    {
+      "id": "challenger-variable",
+      "label": "Variable Font Specimen",
+      "verdict": "declined",
+      "lineage": "Interactive type specimens",
+      "thesis": "One live control reshapes the whole screen.",
+      "palette": ["#FAFAF7", "#0B0B0B", "#FF5A1F"],
+      "materials": ["giant glyphs", "monospace readouts"],
+      "viewport": "A slider drives how relevant the shown results must be.",
+      "case": "Loses on both: there's no real job for an axis slider in finding a file.",
+      "kept": "A live monospace counter.",
+      "risk": "A gimmick."
+    }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "buildPath": { "value": "code" },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A standard AI chat app, executed impeccably.",
+    "palette": ["#FFFFFF", "#1F1F1F", "#0B57D0"],
+    "materials": ["chat bubbles", "file attachment chips"],
+    "viewport": "The chat layout people already expect, with file results as attachment rows.",
+    "risk": "Indistinguishable from Gemini or ChatGPT by design."
+  },
+  "steer": true
+}

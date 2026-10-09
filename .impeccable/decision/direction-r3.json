@@ -1,0 +1,52 @@
+{
+  "title": "Choose the visual world for AiFoundIt search (re-roll 3)",
+  "question": "Steered by your answers: minimal but warm, with one memorable signature, at the polish level of Arc and Linear. The roll assigned Warm Light.",
+  "options": [
+    {
+      "id": "assigned", "label": "Warm Light", "kicker": "THE ROLL",
+      "lineage": "A desk lamp's pool of light on a tidy desk",
+      "thesis": "Quiet, warm-neutral surfaces. When AiFoundIt finds your file, a soft amber light settles on it.",
+      "palette": ["#F6F5F3", "#1C1B1A", "#E4E1DC", "#F2A65A"],
+      "materials": ["warm-neutral surfaces", "soft 14px corners", "one amber light pool"],
+      "viewport": "A small wordmark, a thin indexing line, your question in a soft pill, then the reply. The best match sits in a warm glow labelled Best match; other matches stay plain. Calm move card, dark Move button, floating composer.",
+      "risk": "The glow must mean only 'found'. Used decoratively, it becomes a generic gradient.",
+      "raised": [
+        { "from": "vernacular-ephemera-boarding-pass-and-gate-board", "raise": "When a file is moved, its row moves in place and stays softly lit until you have seen it, never vanishing and reappearing." },
+        { "from": "pop-culture-shelf-vertical-video-feed-surface", "raise": "Tapping a match opens it full screen; the next match is one swipe away." },
+        { "from": "rw-lexicon-shoulder-and-plate", "raise": "The history drawer shows guide words for the span in view (e.g. 'Receipts – Wifi')." },
+        { "from": "aww2-zoo-gardens-guide-map", "raise": "One motion timing everywhere: the light settles with a single gentle ease." },
+        { "from": "operate-b-exposure-record-zone-sheets", "raise": "Neutrals come from one fixed tonal ramp; the found file is the only lit zone." },
+        { "from": "emigre-bitmap-specimen", "raise": "One typeface at a few strict sizes; no decorative type." }
+      ],
+      "comp": ".impeccable/mocks/decision/lamp.png"
+    },
+    {
+      "id": "model-pick", "label": "Linear Precision", "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Linear-style dark product UI",
+      "thesis": "Precise, dark, and dense: files as tidy rows, with a single indigo dot marking the best match.",
+      "palette": ["#0F0F11", "#E8E8EA", "#232328", "#5E6AD2"],
+      "materials": ["hairline borders", "tidy file rows", "keyboard-hint chips", "one indigo glow"],
+      "viewport": "Indexing line, question pill, reply, files as a bordered list with the best match marked by a glowing dot, and an indigo Move button.",
+      "risk": "Very familiar (it reads as Linear), and colder than you asked for.",
+      "comp": ".impeccable/mocks/decision/linear.png"
+    },
+    { "id": "challenger-boarding", "label": "Boarding Pass & Gate Board", "verdict": "declined", "lineage": "Boarding passes and gate boards", "thesis": "The best match as a boarding pass; others on a board.", "palette": ["#F2F2F2", "#111111", "#FFC400"], "materials": ["segmented pass", "mono board"], "viewport": "Pass on top, board below.", "case": "Loses on both: cold and transactional.", "kept": "Changes move in place and stay lit.", "risk": "Feels like travel.", "comp": ".impeccable/mocks/decision/boarding.png", "hero": ".impeccable/mocks/decision/boarding.png" },
+    { "id": "challenger-feed", "label": "Vertical Feed", "verdict": "declined", "lineage": "Full-screen vertical feeds", "thesis": "Each match fills the screen; swipe for the next.", "palette": ["#000000", "#FFFFFF"], "materials": ["full-bleed media", "right-side action rail"], "viewport": "One match per screen.", "case": "Loses on both: hides the answer, and doesn't fit chat.", "kept": "The next match is one swipe away.", "risk": "Looks like TikTok.", "comp": ".impeccable/mocks/decision/feed.png", "hero": ".impeccable/mocks/decision/feed.png" },
+    { "id": "challenger-bitmap", "label": "Bitmap Specimen", "verdict": "declined", "lineage": "Emigre bitmap type", "thesis": "Pixel headline type at poster scale.", "palette": ["#FFFFFF", "#000000", "#FF2E93"], "materials": ["pixel type", "dot texture"], "viewport": "Pixel headline above results.", "case": "Loses on both: loud, not warm.", "kept": "One typeface, strict sizes.", "risk": "Retro.", "comp": ".impeccable/mocks/decision/bitmap.png", "hero": ".impeccable/mocks/decision/bitmap.png" },
+    { "id": "challenger-lexicon", "label": "Lexicon Page", "verdict": "declined", "lineage": "19th-century lexicons", "thesis": "Answers as dictionary entries; files as color plates.", "palette": ["#F3EEE2", "#1A1A1A", "#2E6E8E", "#B0452C"], "materials": ["guide words", "bordered plates"], "viewport": "Entry and plate.", "case": "Loses on both: academic.", "kept": "Guide words for the span in view.", "risk": "Bookish.", "comp": ".impeccable/mocks/decision/lexicon.png", "hero": ".impeccable/mocks/decision/lexicon.png" },
+    { "id": "challenger-zoo", "label": "Garden Guide Map", "verdict": "declined", "lineage": "Zoo guide maps", "thesis": "Big flat color lobes and capsule buttons.", "palette": ["#F5F1E4", "#8ED462", "#F5E211", "#FF705D"], "materials": ["flat lobes", "capsules"], "viewport": "Green lobe behind results.", "case": "Loses on both: playful, not minimal.", "kept": "One motion timing.", "risk": "Childish.", "comp": ".impeccable/mocks/decision/zoo.png", "hero": ".impeccable/mocks/decision/zoo.png" },
+    { "id": "challenger-exposure", "label": "Exposure Record", "verdict": "declined", "lineage": "Darkroom exposure records", "thesis": "Translucent sheets over a tonal ramp.", "palette": ["#CFCFCF", "#111111", "#C2185B"], "materials": ["zone ramp", "hatching"], "viewport": "Stacked sheets.", "case": "Loses on both: technical and cold.", "kept": "One tonal ramp; only the found zone is lit.", "risk": "Obscure.", "comp": ".impeccable/mocks/decision/exposure.png", "hero": ".impeccable/mocks/decision/exposure.png" }
+  ],
+  "reroll": { "registers": ["safer", "bolder"] },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A standard AI chat app, executed impeccably.",
+    "palette": ["#FFFFFF", "#1F1F1F", "#0B57D0"],
+    "materials": ["chat bubbles", "attachment rows"],
+    "viewport": "The chat layout people already expect.",
+    "risk": "Indistinguishable from Gemini or ChatGPT by design.",
+    "comp": ".impeccable/mocks/decision/canon.png"
+  },
+  "steer": true
+}

@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-09T17:28:58Z",
+  "title": "Design System: AiFoundIt",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Deep Amber", "canonical": "#8B5000", "tonalRamp": ["#2C1600", "#4A2800", "#6A3C00", "#8B5000", "#A9630A", "#D07F22", "#FFB870", "#FFDCBE"] },
+      "on-primary": { "role": "primary", "displayName": "On Amber (White)", "canonical": "#FFFFFF", "tonalRamp": ["#4A2800", "#6A3C00", "#8B5000", "#B96A0B", "#D98C2F", "#FFB870", "#FFDCBE", "#FFFFFF"] },
+      "primary-container": { "role": "primary", "displayName": "Amber Wash", "canonical": "#FFDCBE", "tonalRamp": ["#2C1600", "#4A2800", "#6A3C00", "#8B5000", "#A9630A", "#D07F22", "#FFB870", "#FFDCBE"] },
+      "on-primary-container": { "role": "primary", "displayName": "Dark Amber", "canonical": "#2C1600", "tonalRamp": ["#2C1600", "#4A2800", "#6A3C00", "#8B5000", "#A9630A", "#D07F22", "#FFB870", "#FFDCBE"] },
+      "secondary-container": { "role": "secondary", "displayName": "Warm Sand", "canonical": "#F1E0D2", "tonalRamp": ["#2A1A0E", "#3C2B1D", "#4A3A2D", "#6A5544", "#8F7663", "#C2A893", "#F1E0D2", "#FBF1E8"] },
+      "on-secondary-container": { "role": "secondary", "displayName": "Deep Sand", "canonical": "#2A1A0E", "tonalRamp": ["#2A1A0E", "#3C2B1D", "#4A3A2D", "#6A5544", "#8F7663", "#C2A893", "#F1E0D2", "#FBF1E8"] },
+      "surface": { "role": "neutral", "displayName": "Stone Paper", "canonical": "#FBFAF8", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#373431", "#57524C", "#857F78", "#D8D2CB", "#FBFAF8"] },
+      "surface-container-low": { "role": "neutral", "displayName": "Stone Step 1", "canonical": "#F5F3F0", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#373431", "#57524C", "#857F78", "#D8D2CB", "#FBFAF8"] },
+      "surface-container": { "role": "neutral", "displayName": "Stone Step 2", "canonical": "#EFECE8", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#373431", "#57524C", "#857F78", "#D8D2CB", "#FBFAF8"] },
+      "surface-container-high": { "role": "neutral", "displayName": "Stone Step 3", "canonical": "#E9E5E0", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#373431", "#57524C", "#857F78", "#D8D2CB", "#FBFAF8"] },
+      "surface-container-highest": { "role": "neutral", "displayName": "Stone Step 4", "canonical": "#E2DED8", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#373431", "#57524C", "#857F78", "#D8D2CB", "#FBFAF8"] },
+      "on-surface": { "role": "neutral", "displayName": "Warm Ink", "canonical": "#1D1B19", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#373431", "#57524C", "#857F78", "#D8D2CB", "#FBFAF8"] },
+      "on-surface-variant": { "role": "neutral", "displayName": "Muted Stone", "canonical": "#57524C", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#373431", "#57524C", "#857F78", "#D8D2CB", "#FBFAF8"] },
+      "outline": { "role": "neutral", "displayName": "Stone Outline", "canonical": "#857F78", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#373431", "#57524C", "#857F78", "#D8D2CB", "#FBFAF8"] },
+      "outline-variant": { "role": "neutral", "displayName": "Stone Line", "canonical": "#D8D2CB", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#373431", "#57524C", "#857F78", "#D8D2CB", "#FBFAF8"] },
+      "inverse-surface": { "role": "neutral", "displayName": "Warm Charcoal", "canonical": "#33302D", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#33302D", "#57524C", "#857F78", "#D8D2CB", "#F6F0EA"] },
+      "inverse-on-surface": { "role": "neutral", "displayName": "Cream", "canonical": "#F6F0EA", "tonalRamp": ["#1D1B19", "#221F1D", "#2C2927", "#33302D", "#57524C", "#857F78", "#D8D2CB", "#F6F0EA"] },
+      "inverse-primary": { "role": "primary", "displayName": "Light Amber", "canonical": "#FFB870", "tonalRamp": ["#2C1600", "#4A2800", "#6A3C00", "#8B5000", "#A9630A", "#D07F22", "#FFB870", "#FFDCBE"] },
+      "error": { "role": "error", "displayName": "Signal Red", "canonical": "#BA1A1A", "tonalRamp": ["#410002", "#690005", "#93000A", "#BA1A1A", "#DE3730", "#FF6B5E", "#FFB4AB", "#FFDAD6"] },
+      "scrim": { "role": "neutral", "displayName": "Scrim 32", "canonical": "rgba(0,0,0,0.32)", "tonalRamp": ["rgba(0,0,0,0.08)", "rgba(0,0,0,0.16)", "rgba(0,0,0,0.24)", "rgba(0,0,0,0.32)", "rgba(0,0,0,0.38)", "rgba(0,0,0,0.44)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.56)"] },
+      "primary-dark": { "role": "primary", "displayName": "Light Amber (dark scheme)", "canonical": "#FFB870", "tonalRamp": ["#2C1600", "#4A2800", "#6A3C00", "#8B5000", "#A9630A", "#D07F22", "#FFB870", "#FFDCBE"] },
+      "on-primary-dark": { "role": "primary", "displayName": "Dark Amber (dark scheme)", "canonical": "#4A2800", "tonalRamp": ["#2C1600", "#4A2800", "#6A3C00", "#8B5000", "#A9630A", "#D07F22", "#FFB870", "#FFDCBE"] },
+      "primary-container-dark": { "role": "primary", "displayName": "Deep Amber Fill (dark scheme)", "canonical": "#6A3C00", "tonalRamp": ["#2C1600", "#4A2800", "#6A3C00", "#8B5000", "#A9630A", "#D07F22", "#FFB870", "#FFDCBE"] },
+      "on-primary-container-dark": { "role": "primary", "displayName": "Amber Wash Text (dark scheme)", "canonical": "#FFDCBE", "tonalRamp": ["#2C1600", "#4A2800", "#6A3C00", "#8B5000", "#A9630A", "#D07F22", "#FFB870", "#FFDCBE"] },
+      "secondary-container-dark": { "role": "secondary", "displayName": "Deep Sand (dark scheme)", "canonical": "#4A3A2D", "tonalRamp": ["#2A1A0E", "#3C2B1D", "#4A3A2D", "#6A5544", "#8F7663", "#C2A893", "#F1E0D2", "#FBF1E8"] },
+      "on-secondary-container-dark": { "role": "secondary", "displayName": "Warm Sand Text (dark scheme)", "canonical": "#F1E0D2", "tonalRamp": ["#2A1A0E", "#3C2B1D", "#4A3A2D", "#6A5544", "#8F7663", "#C2A893", "#F1E0D2", "#FBF1E8"] },
+      "surface-dark": { "role": "neutral", "displayName": "Dark Stone Paper", "canonical": "#151311", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#E9E2DC"] },
+      "surface-container-low-dark": { "role": "neutral", "displayName": "Dark Stone Step 1", "canonical": "#1D1B19", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#E9E2DC"] },
+      "surface-container-dark": { "role": "neutral", "displayName": "Dark Stone Step 2", "canonical": "#221F1D", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#E9E2DC"] },
+      "surface-container-high-dark": { "role": "neutral", "displayName": "Dark Stone Step 3", "canonical": "#2C2927", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#E9E2DC"] },
+      "surface-container-highest-dark": { "role": "neutral", "displayName": "Dark Stone Step 4", "canonical": "#373431", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#E9E2DC"] },
+      "on-surface-dark": { "role": "neutral", "displayName": "Warm Paper Ink (dark scheme)", "canonical": "#E9E2DC", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#E9E2DC"] },
+      "on-surface-variant-dark": { "role": "neutral", "displayName": "Muted Stone (dark scheme)", "canonical": "#CFC6BD", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#E9E2DC"] },
+      "outline-dark": { "role": "neutral", "displayName": "Stone Outline (dark scheme)", "canonical": "#999088", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#E9E2DC"] },
+      "outline-variant-dark": { "role": "neutral", "displayName": "Stone Line (dark scheme)", "canonical": "#4A4540", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#E9E2DC"] },
+      "inverse-surface-dark": { "role": "neutral", "displayName": "Warm Paper Ink (dark inverse)", "canonical": "#E9E2DC", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#F6F0EA"] },
+      "inverse-on-surface-dark": { "role": "neutral", "displayName": "Warm Charcoal (dark inverse)", "canonical": "#33302D", "tonalRamp": ["#151311", "#1D1B19", "#221F1D", "#2C2927", "#373431", "#857F78", "#D8D2CB", "#F6F0EA"] },
+      "inverse-primary-dark": { "role": "primary", "displayName": "Deep Amber (dark inverse)", "canonical": "#8B5000", "tonalRamp": ["#2C1600", "#4A2800", "#6A3C00", "#8B5000", "#A9630A", "#D07F22", "#FFB870", "#FFDCBE"] },
+      "error-dark": { "role": "error", "displayName": "Signal Red Tint (dark scheme)", "canonical": "#FFB4AB", "tonalRamp": ["#410002", "#690005", "#93000A", "#BA1A1A", "#DE3730", "#FF6B5E", "#FFB4AB", "#FFDAD6"] },
+      "scrim-dark": { "role": "neutral", "displayName": "Scrim 50 (dark scheme)", "canonical": "rgba(0,0,0,0.5)", "tonalRamp": ["rgba(0,0,0,0.08)", "rgba(0,0,0,0.16)", "rgba(0,0,0,0.24)", "rgba(0,0,0,0.32)", "rgba(0,0,0,0.38)", "rgba(0,0,0,0.44)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.56)"] }
+    },
+    "typographyMeta": {
+      "headline-small": { "displayName": "Headline Small", "purpose": "Promise headlines on first-run and empty states only." },
+      "title-large": { "displayName": "Title Large", "purpose": "Top app bar conversation title." },
+      "title-medium": { "displayName": "Title Medium", "purpose": "Card headers — proposal questions, sheet filenames." },
+      "title-small": { "displayName": "Title Small", "purpose": "Drawer section labels and brand line." },
+      "body-large": { "displayName": "Body Large", "purpose": "Default reading voice: replies, bubbles, input, suggestion rows." },
+      "body-medium": { "displayName": "Body Medium", "purpose": "Secondary content: metadata, lists, snackbar text." },
+      "body-small": { "displayName": "Body Small", "purpose": "Captions, disclaimers, index counts." },
+      "label-large": { "displayName": "Label Large", "purpose": "Button labels and file names." },
+      "label-medium": { "displayName": "Label Medium", "purpose": "Tiny labels: timestamps, 'Why it matched'." }
+    },
+    "shadows": [
+      { "name": "snackbar-float", "value": "0 3px 6px rgba(0,0,0,0.2)", "purpose": "The only shadow in the system; lifts the transient snackbar above the composer and list. Android elevation 6." }
+    ],
+    "motion": [
+      { "name": "enter-rise", "value": "fade-in-down 280ms, exponential ease-out", "purpose": "Assistant turns, card grids, and proposal cards fade and rise on entry; disabled under reduced motion." },
+      { "name": "snackbar-in", "value": "fade-in 200ms, exponential ease-out", "purpose": "Snackbar entrance." },
+      { "name": "snackbar-out", "value": "fade-out 150ms", "purpose": "Snackbar exit." },
+      { "name": "sheet-slide", "value": "slide-up", "purpose": "Bottom sheet entrance; 'none' under reduced motion." },
+      { "name": "press-ripple", "value": "Android ripple, outline-variant tint (translucent on-primary on filled)", "purpose": "All press feedback is a ripple, never a lift or scale." }
+    ],
+    "breakpoints": [
+      { "name": "content-max", "value": "720px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Filled Button",
+      "kind": "button",
+      "refersTo": "button-filled",
+      "description": "The single forward action per context — Deep Amber pill with white label.",
+      "html": "<button class=\"ds-btn-filled\" type=\"button\">Allow file access</button>",
+      "css": ".ds-btn-filled { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 24px; border:none; border-radius:999px; background:#8B5000; color:#FFFFFF; font-family:Roboto, sans-serif; font-size:14px; font-weight:500; line-height:20px; letter-spacing:0.1px; cursor:pointer; transition:background 0.15s; } .ds-btn-filled:hover { background:#6A3C00; } .ds-btn-filled:focus-visible { outline:2px solid #8B5000; outline-offset:2px; }"
+    },
+    {
+      "name": "Tonal Button",
+      "kind": "button",
+      "refersTo": "button-tonal",
+      "description": "Supporting actions — Warm Sand fill for 'New search', 'Share'.",
+      "html": "<button class=\"ds-btn-tonal\" type=\"button\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"#2A1A0E\"><path d=\"M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z\"/></svg>New search</button>",
+      "css": ".ds-btn-tonal { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 24px 0 16px; border:none; border-radius:999px; background:#F1E0D2; color:#2A1A0E; font-family:Roboto, sans-serif; font-size:14px; font-weight:500; line-height:20px; letter-spacing:0.1px; cursor:pointer; transition:background 0.15s; } .ds-btn-tonal:hover { background:#E2DED8; } .ds-btn-tonal:focus-visible { outline:2px solid #857F78; outline-offset:2px; }"
+    },
+    {
+      "name": "Text Button",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "Low-emphasis actions — transparent with Deep Amber label ('Cancel', 'Show N more').",
+      "html": "<button class=\"ds-btn-text\" type=\"button\">Show 7 more</button>",
+      "css": ".ds-btn-text { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 12px; border:none; border-radius:999px; background:transparent; color:#8B5000; font-family:Roboto, sans-serif; font-size:14px; font-weight:500; line-height:20px; letter-spacing:0.1px; cursor:pointer; transition:background 0.15s; } .ds-btn-text:hover { background:rgba(139,80,0,0.08); } .ds-btn-text:focus-visible { outline:2px solid #8B5000; outline-offset:2px; }"
+    },
+    {
+      "name": "Send Button",
+      "kind": "button",
+      "refersTo": "icon-button-filled",
+      "description": "48px Deep Amber circle — the composer's send action; disabled until text exists.",
+      "html": "<button class=\"ds-iconbtn-send\" type=\"button\" aria-label=\"Send\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"#FFFFFF\"><path d=\"M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z\"/></svg></button>",
+      "css": ".ds-iconbtn-send { width:48px; height:48px; border:none; border-radius:999px; background:#8B5000; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:background 0.15s; } .ds-iconbtn-send:hover { background:#6A3C00; } .ds-iconbtn-send:focus-visible { outline:2px solid #8B5000; outline-offset:2px; } .ds-iconbtn-send:disabled { background:#E2DED8; cursor:default; } .ds-iconbtn-send:disabled svg { fill:#1D1B19; opacity:0.38; }"
+    },
+    {
+      "name": "Composer",
+      "kind": "input",
+      "refersTo": "composer",
+      "description": "Rounded tonal input bar pinned above the keyboard with the filled amber send button.",
+      "html": "<div class=\"ds-composer\"><input class=\"ds-composer-input\" type=\"text\" placeholder=\"Describe a file\" aria-label=\"Describe a file\"/><button class=\"ds-composer-send\" type=\"button\" aria-label=\"Send\" disabled><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"#1D1B19\"><path d=\"M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z\"/></svg></button></div>",
+      "css": ".ds-composer { display:flex; align-items:flex-end; gap:8px; min-height:56px; padding:4px 4px 4px 24px; background:#E9E5E0; border-radius:28px; } .ds-composer-input { flex:1; border:none; background:transparent; padding:12px 0; font-family:Roboto, sans-serif; font-size:16px; line-height:24px; letter-spacing:0.25px; color:#1D1B19; caret-color:#8B5000; } .ds-composer-input::placeholder { color:#57524C; } .ds-composer-input:focus { outline:none; } .ds-composer-send { width:48px; height:48px; border:none; border-radius:999px; background:#8B5000; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; } .ds-composer-send svg { fill:#FFFFFF; } .ds-composer-send:disabled { background:#E2DED8; cursor:default; } .ds-composer-send:disabled svg { fill:#1D1B19; opacity:0.38; } .ds-composer-send:not(:disabled):hover { background:#6A3C00; }"
+    },
+    {
+      "name": "User Bubble",
+      "kind": "custom",
+      "refersTo": "user-bubble",
+      "description": "Right-aligned tonal bubble — 20px radius with a 4px trailing corner, capped at 82% width.",
+      "html": "<div class=\"ds-thread\"><div class=\"ds-user-bubble\">The screenshot with the wifi password</div></div>",
+      "css": ".ds-thread { display:flex; } .ds-user-bubble { max-width:82%; margin-left:auto; background:#E9E5E0; border-radius:20px; border-bottom-right-radius:4px; padding:12px 16px; font-family:Roboto, sans-serif; font-size:16px; line-height:24px; letter-spacing:0.25px; color:#1D1B19; }"
+    },
+    {
+      "name": "File Card",
+      "kind": "card",
+      "refersTo": "file-card",
+      "description": "Outlined result card: tonal thumbnail, Label Large filename, Body Small date·folder meta.",
+      "html": "<div class=\"ds-file-card\"><div class=\"ds-file-thumb\"><div class=\"ds-file-thumb-app\">Settings</div><div class=\"ds-file-thumb-title\">Wi-Fi</div><div class=\"ds-file-thumb-row\"><span>Password</span><strong>tr0pic-mango-71</strong></div></div><div class=\"ds-file-meta\"><div class=\"ds-file-name\">Screenshot_20260314_201145.png</div><div class=\"ds-file-sub\">Mar 14 · Screenshots</div></div></div>",
+      "css": ".ds-file-card { width:180px; background:#FBFAF8; border:1px solid #D8D2CB; border-radius:12px; padding:8px; font-family:Roboto, sans-serif; } .ds-file-thumb { height:128px; background:#E9E5E0; border-radius:8px; padding:12px; overflow:hidden; } .ds-file-thumb-app { font-size:10px; line-height:13px; color:#57524C; letter-spacing:0.4px; } .ds-file-thumb-title { font-size:11px; line-height:14px; font-weight:600; color:#1D1B19; margin-bottom:4px; } .ds-file-thumb-row { display:flex; justify-content:space-between; gap:8px; font-size:10px; line-height:13px; margin-top:4px; } .ds-file-thumb-row span { color:#57524C; } .ds-file-thumb-row strong { color:#1D1B19; font-weight:600; } .ds-file-meta { padding:8px 4px 4px; } .ds-file-name { font-size:14px; line-height:20px; font-weight:500; letter-spacing:0.1px; color:#1D1B19; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .ds-file-sub { font-size:12px; line-height:16px; letter-spacing:0.4px; color:#57524C; } .ds-file-card:hover { background:#F5F3F0; }"
+    },
+    {
+      "name": "Move Proposal Card",
+      "kind": "card",
+      "refersTo": "proposal-card",
+      "description": "Confirmation card for a file move — preview list plus cancel/confirm; the AI proposes, the person decides.",
+      "html": "<div class=\"ds-proposal\"><div class=\"ds-proposal-head\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"#8B5000\"><path d=\"M20 6h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zm-4 9v-3h-4v-2h4V7l4 4-4 4z\"/></svg><span>Move 4 receipts to Documents/Receipts?</span></div><div class=\"ds-proposal-files\"><span>Receipt_Continente_2026-09-03.pdf</span><span>Receipt_Galp_2026-09-12.pdf</span><span>Receipt_Bertrand_2026-09-14.pdf</span><span>and 1 more</span></div><div class=\"ds-proposal-note\">Nothing is deleted. You can undo the move.</div><div class=\"ds-proposal-actions\"><button class=\"ds-proposal-cancel\" type=\"button\">Cancel</button><button class=\"ds-proposal-confirm\" type=\"button\">Move 4 files</button></div></div>",
+      "css": ".ds-proposal { max-width:420px; background:#F5F3F0; border:1px solid #D8D2CB; border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px; font-family:Roboto, sans-serif; color:#1D1B19; } .ds-proposal-head { display:flex; gap:12px; align-items:flex-start; font-size:16px; font-weight:500; line-height:24px; letter-spacing:0.15px; } .ds-proposal-files { display:flex; flex-direction:column; gap:2px; padding-left:36px; font-size:14px; line-height:20px; letter-spacing:0.25px; color:#57524C; } .ds-proposal-note { font-size:12px; line-height:16px; letter-spacing:0.4px; color:#57524C; } .ds-proposal-actions { display:flex; justify-content:flex-end; gap:8px; } .ds-proposal-cancel { min-height:48px; padding:0 12px; border:none; border-radius:999px; background:transparent; color:#8B5000; font:inherit; font-weight:500; letter-spacing:0.1px; cursor:pointer; } .ds-proposal-cancel:hover { background:rgba(139,80,0,0.08); } .ds-proposal-confirm { min-height:48px; padding:0 24px; border:none; border-radius:999px; background:#8B5000; color:#FFFFFF; font:inherit; font-weight:500; letter-spacing:0.1px; cursor:pointer; } .ds-proposal-confirm:hover { background:#6A3C00; }"
+    },
+    {
+      "name": "Snackbar",
+      "kind": "custom",
+      "refersTo": "snackbar",
+      "description": "Inverted charcoal bar with Light Amber action — the system's only shadowed element; auto-dismisses after 6s.",
+      "html": "<div class=\"ds-snackbar\"><span class=\"ds-snackbar-text\">Moved 4 files to Documents/Receipts.</span><button class=\"ds-snackbar-action\" type=\"button\">Undo</button></div>",
+      "css": ".ds-snackbar { display:flex; align-items:center; min-height:48px; margin:0 16px 8px; padding:0 4px 0 16px; background:#33302D; border-radius:8px; box-shadow:0 3px 6px rgba(0,0,0,0.2); font-family:Roboto, sans-serif; color:#F6F0EA; font-size:14px; line-height:20px; letter-spacing:0.25px; } .ds-snackbar-text { flex:1; padding:12px 0; } .ds-snackbar-action { min-height:48px; padding:0 12px; border:none; border-radius:999px; background:transparent; color:#FFB870; font:inherit; font-weight:500; letter-spacing:0.1px; cursor:pointer; } .ds-snackbar-action:hover { background:rgba(255,184,112,0.12); } .ds-snackbar-action:focus-visible { outline:2px solid #FFB870; outline-offset:2px; }"
+    },
+    {
+      "name": "Bottom Sheet",
+      "kind": "custom",
+      "refersTo": "bottom-sheet",
+      "description": "Stone Step 1 sheet rounded at the top only, over a 32% scrim, with a drag handle — home of 'Why it matched'.",
+      "html": "<div class=\"ds-sheet-scrim\"><div class=\"ds-sheet\"><div class=\"ds-sheet-handle\"></div><div class=\"ds-sheet-title\">Passport_scan.pdf</div><div class=\"ds-sheet-meta\">Feb 11 · 1.2 MB</div><div class=\"ds-sheet-reason\"><div class=\"ds-sheet-reason-label\">Why it matched</div><div>Tagged passport and id; saved in Documents/ID.</div></div></div></div>",
+      "css": ".ds-sheet-scrim { background:rgba(0,0,0,0.32); padding-top:40px; display:flex; align-items:flex-end; justify-content:center; } .ds-sheet { width:100%; max-width:480px; max-height:88%; background:#F5F3F0; border-radius:28px 28px 0 0; padding:0 24px 16px; font-family:Roboto, sans-serif; color:#1D1B19; } .ds-sheet-handle { width:32px; height:4px; border-radius:2px; background:#857F78; opacity:0.4; margin:16px auto; } .ds-sheet-title { font-size:16px; font-weight:500; line-height:24px; letter-spacing:0.15px; } .ds-sheet-meta { font-size:14px; line-height:20px; letter-spacing:0.25px; color:#57524C; margin-bottom:24px; } .ds-sheet-reason { background:#E9E5E0; border-radius:12px; padding:16px; font-size:14px; line-height:20px; letter-spacing:0.25px; } .ds-sheet-reason-label { font-size:12px; font-weight:500; line-height:16px; letter-spacing:0.5px; color:#57524C; margin-bottom:4px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Category Standard, Warm",
+    "overview": "AiFoundIt deliberately follows familiar AI-chat conventions — the Gemini/ChatGPT/Claude pattern — rather than a distinctive visual concept, and the entire design effort goes into executing that canon at high craft. The warmth the user asked for comes from a warm-neutral stone palette and a single deep amber accent, not from decoration. There is no AI sparkle, no gradient, no glow; the craft lives in spacing, type scale, state behavior, and honest copy.\n\nThe system is a React Native implementation of Material 3, expressed as a JS theme object with paired light and dark palettes consumed through role names. Surfaces layer tonally; outlined cards carry structure instead of shadows. Copy does design work: privacy promises are stated plainly, index state is shown honestly, and the demo is labeled as sample data.",
+    "keyCharacteristics": [
+      "Single deep amber accent reserved for send, primary actions, selection, and progress",
+      "Warm-neutral stone surface ramp, tonal layering instead of shadows",
+      "Roboto (platform sans-serif) on the Material 3 type scale — no display face",
+      "Pill-shaped buttons and list items; outlined file and suggestion cards",
+      "Chat asymmetry: user turns in tonal bubbles, assistant turns as plain text with cards",
+      "Material Symbols icons; state communicated through Android ripples and snackbar feedback"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Amber primary is reserved for send, primary actions, selection, progress, and the confirming check. It is never decoration, never a large fill, never a background tint on its own. If a new screen needs emphasis, reach for tonal surfaces first.", "section": "colors" },
+      { "name": "The Ramp, Not the Shadow Rule", "body": "Depth is conveyed by stepping up the surface ramp and outlining with Stone Line — not by elevation. New surfaces pick a ramp step, not a shadow.", "section": "colors" },
+      { "name": "The System Face Rule", "body": "Type comes from the platform (sans-serif / sans-serif-medium on Android, system default elsewhere). No bundled display face, no brand font. Icons are Material Symbols; they are iconography, not a typeface decision.", "section": "typography" },
+      { "name": "The Two-Weight Rule", "body": "UI text runs at 400 or 500 only. A lone 600 appears inside simulated file-thumbnail previews, where it imitates app content rather than UI chrome.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest and in state. Press feedback is an Android ripple tinted with Stone Line — not a lift. If content must overlay the canvas, use a sheet or snackbar, not a floating card.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do reserve Deep Amber for send, primary actions, selection, and progress — tonal surfaces do the rest of the work.",
+      "Do outline cards with a 1px Stone Line border on the paper surface instead of adding elevation.",
+      "Do state privacy and data status in plain Body Small copy ('This preview uses sample files', 'Still indexing, so some files may not show up yet') — honesty is a visual element here.",
+      "Do honor reduced motion: entry animations (280ms fade-and-rise, sheet slide) drop to instant when the system requests it.",
+      "Do pick surface steps off the ramp by role — sheets/drawers/proposals on Low, composer and bubbles on High, disabled fills on Highest."
+    ],
+    "donts": [
+      "Don't add decorative AI effects — no sparkle icons, gradients, glows, shimmer skeletons, or branded mascot moments; the chosen direction is the category standard.",
+      "Don't introduce shadows on cards, buttons, or bars — the snackbar is the sole shadowed element.",
+      "Don't introduce a second accent hue or a display typeface; the system is one amber plus stone, one platform sans.",
+      "Don't treat the current app icon, adaptive icon background (#E6F4FE), or splash screen (#208AEF) as palette — they are Expo template defaults disclosed in PRODUCT.md, a known carry-over awaiting brand assets, not design decisions.",
+      "Don't auto-emphasize with caps or heavy weights; UI type stays at 400/500, and destructive or relocating actions always present a confirm affordance, never just styling."
+    ]
+  }
+}

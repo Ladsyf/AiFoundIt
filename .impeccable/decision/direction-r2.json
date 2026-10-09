@@ -1,0 +1,231 @@
+{
+  "title": "Choose the visual world for AiFoundIt search (re-roll 2, minimalist)",
+  "question": "Every option is minimalist, and every card now shows a preview of the chat screen in that direction (hand-built HTML mocks). The roll assigned Station Clock.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Station Clock",
+      "kicker": "THE ROLL",
+      "lineage": "Hans Hilfiker's Swiss railway clock: white face, black bars, one red disc",
+      "thesis": "Black on white, with a single red disc that appears only where AiFoundIt found something.",
+      "palette": [
+        "#FFFFFF",
+        "#000000",
+        "#EB0000"
+      ],
+      "materials": [
+        "1px black hairlines",
+        "tick-mark indexing bar",
+        "one red disc"
+      ],
+      "viewport": "Wordmark with a red disc, a row of tick marks showing indexing progress, the question right-aligned in bold, and the reply above a three-cell grid where the best match carries the red disc. A hairline move proposal sits below, with a black Move button.",
+      "risk": "If the red disc gets used for anything other than 'found', the whole system loses its meaning.",
+      "raised": [
+        {
+          "from": "rw-timetable-slide-rack",
+          "raise": "One type size across the whole app; hierarchy comes only from weight and position."
+        },
+        {
+          "from": "ikeda-datamatics",
+          "raise": "No greys and no tints: black, white, and the one red."
+        },
+        {
+          "from": "rw-centre-rail-reference-setting",
+          "raise": "States are printed marks: red disc = best match, hollow ring = also matches, filled tick = indexed."
+        },
+        {
+          "from": "japanese-high-density-web",
+          "raise": "Every division is a 1px black hairline. No shadows, no cards, no fills."
+        },
+        {
+          "from": "pop-culture-shelf-doujin-event-catalog",
+          "raise": "Results reflow in whole grid cells: 3 across on a phone, 5 on a tablet."
+        },
+        {
+          "from": "wayfinding-cartography-signage-midnight-transit-diagram",
+          "raise": "Thumbnails never shrink below a readable size; more results means more rows, not smaller cells."
+        }
+      ],
+      "comp": ".impeccable/mocks/decision/station-clock.png"
+    },
+    {
+      "id": "model-pick",
+      "label": "E-ink Page",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "E-reader screens: warm grey ground, book serif, no color",
+      "thesis": "Answers read like a quiet page of a book; files are listed like a table of contents.",
+      "palette": [
+        "#EBEBE8",
+        "#1E1E1E",
+        "#BDBDB8"
+      ],
+      "materials": [
+        "paper-grey ground",
+        "book serif",
+        "dithered thumbnails",
+        "underline composer"
+      ],
+      "viewport": "Your question in italics, the answer in serif, files as listed entries with small dithered thumbnails, and an outlined Move button.",
+      "risk": "Familiar and soft: it can feel drab, and the demo moment would be quiet.",
+      "comp": ".impeccable/mocks/decision/eink.png"
+    },
+    {
+      "id": "challenger-ikeda",
+      "label": "Datamatics Field",
+      "verdict": "declined",
+      "lineage": "Ryoji Ikeda's black-and-white data installations",
+      "thesis": "Results as barcode columns and monospace data.",
+      "palette": [
+        "#000000",
+        "#FFFFFF"
+      ],
+      "materials": [
+        "bar fields",
+        "mono numerals"
+      ],
+      "viewport": "Barcode field behind results.",
+      "case": "Loses on both: too dense and cold to be calm.",
+      "kept": "Pure black and white only.",
+      "risk": "Strobing, hostile.",
+      "comp": ".impeccable/mocks/decision/ikeda.png",
+      "hero": ".impeccable/mocks/decision/ikeda.png"
+    },
+    {
+      "id": "challenger-jp-dense",
+      "label": "High-Density Modules",
+      "verdict": "declined",
+      "lineage": "Japanese high-density web pages",
+      "thesis": "Packed boxed modules with red tabs.",
+      "palette": [
+        "#FFFFFF",
+        "#111111",
+        "#D7000F",
+        "#E5E5E5"
+      ],
+      "materials": [
+        "hairline modules",
+        "small tabs"
+      ],
+      "viewport": "A mosaic of modules.",
+      "case": "Loses on both: the opposite of minimalist.",
+      "kept": "A strict 1px hairline system.",
+      "risk": "Noise.",
+      "comp": ".impeccable/mocks/decision/jp-dense.png",
+      "hero": ".impeccable/mocks/decision/jp-dense.png"
+    },
+    {
+      "id": "challenger-centre-rail",
+      "label": "Centre-Rail Reference",
+      "verdict": "declined",
+      "lineage": "Wide-margin scholarly editions",
+      "thesis": "Twin text columns around a rail of keys.",
+      "palette": [
+        "#EFE9DD",
+        "#1A1A1A",
+        "#C2321B"
+      ],
+      "materials": [
+        "ruled hairlines",
+        "small caps"
+      ],
+      "viewport": "Two columns with a center rail.",
+      "case": "Loses on both: scholarly, and two columns don't fit a phone.",
+      "kept": "States as printed marks.",
+      "risk": "Academic.",
+      "comp": ".impeccable/mocks/decision/centre-rail.png",
+      "hero": ".impeccable/mocks/decision/centre-rail.png"
+    },
+    {
+      "id": "challenger-doujin",
+      "label": "Convention Catalog",
+      "verdict": "declined",
+      "lineage": "Doujin event catalogs",
+      "thesis": "Hundreds of stamp-size thumbnails, circled in pen.",
+      "palette": [
+        "#E6E4DE",
+        "#111111",
+        "#2A6FDB"
+      ],
+      "materials": [
+        "newsprint",
+        "biro circles"
+      ],
+      "viewport": "Dense thumbnail grid.",
+      "case": "Loses on both: too dense, and it reads as a hobby reference.",
+      "kept": "Reflowing by whole cells.",
+      "risk": "Clutter.",
+      "comp": ".impeccable/mocks/decision/doujin.png",
+      "hero": ".impeccable/mocks/decision/doujin.png"
+    },
+    {
+      "id": "challenger-transit",
+      "label": "Midnight Transit Map",
+      "verdict": "declined",
+      "lineage": "Enamel metro diagrams",
+      "thesis": "Files as stations on colored lines.",
+      "palette": [
+        "#14213D",
+        "#FFFFFF",
+        "#E63946",
+        "#F4A300"
+      ],
+      "materials": [
+        "enamel",
+        "colored lines"
+      ],
+      "viewport": "Folders drawn as lines.",
+      "case": "Loses on both: colorful and forced.",
+      "kept": "Never shrink content into an unreadable miniature.",
+      "risk": "Gimmick.",
+      "comp": ".impeccable/mocks/decision/transit.png",
+      "hero": ".impeccable/mocks/decision/transit.png"
+    },
+    {
+      "id": "challenger-slide-rack",
+      "label": "Timetable Slide Rack",
+      "verdict": "declined",
+      "lineage": "1970s pocket airline timetables",
+      "thesis": "Every word at one type size, on slanted glass slides.",
+      "palette": [
+        "#D9A62E",
+        "#1C1C1C",
+        "#F3EEDD",
+        "#C2321B"
+      ],
+      "materials": [
+        "tinted glass",
+        "goldenrod bed"
+      ],
+      "viewport": "A slanted rack of slides.",
+      "case": "Loses on both: the slanted rack fights minimalism.",
+      "kept": "One type size; hierarchy from weight only.",
+      "risk": "Ornate.",
+      "comp": ".impeccable/mocks/decision/slide-rack.png",
+      "hero": ".impeccable/mocks/decision/slide-rack.png"
+    }
+  ],
+  "reroll": {
+    "registers": [
+      "safer",
+      "bolder"
+    ]
+  },
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A standard AI chat app, executed impeccably.",
+    "palette": [
+      "#FFFFFF",
+      "#1F1F1F",
+      "#0B57D0"
+    ],
+    "materials": [
+      "chat bubbles",
+      "attachment rows"
+    ],
+    "viewport": "The chat layout people already expect, with files as attachment rows.",
+    "risk": "Indistinguishable from Gemini or ChatGPT by design.",
+    "comp": ".impeccable/mocks/decision/canon.png"
+  },
+  "steer": true
+}

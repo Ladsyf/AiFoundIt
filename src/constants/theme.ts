@@ -1,65 +1,89 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
-import '@/global.css';
-
-import { Platform } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    primary: '#8B5000',
+    onPrimary: '#FFFFFF',
+    primaryContainer: '#FFDCBE',
+    onPrimaryContainer: '#2C1600',
+    secondaryContainer: '#F1E0D2',
+    onSecondaryContainer: '#2A1A0E',
+    surface: '#FBFAF8',
+    surfaceContainerLow: '#F5F3F0',
+    surfaceContainer: '#EFECE8',
+    surfaceContainerHigh: '#E9E5E0',
+    surfaceContainerHighest: '#E2DED8',
+    onSurface: '#1D1B19',
+    onSurfaceVariant: '#57524C',
+    outline: '#857F78',
+    outlineVariant: '#D8D2CB',
+    inverseSurface: '#33302D',
+    inverseOnSurface: '#F6F0EA',
+    inversePrimary: '#FFB870',
+    error: '#BA1A1A',
+    scrim: 'rgba(0,0,0,0.32)',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    primary: '#FFB870',
+    onPrimary: '#4A2800',
+    primaryContainer: '#6A3C00',
+    onPrimaryContainer: '#FFDCBE',
+    secondaryContainer: '#4A3A2D',
+    onSecondaryContainer: '#F1E0D2',
+    surface: '#151311',
+    surfaceContainerLow: '#1D1B19',
+    surfaceContainer: '#221F1D',
+    surfaceContainerHigh: '#2C2927',
+    surfaceContainerHighest: '#373431',
+    onSurface: '#E9E2DC',
+    onSurfaceVariant: '#CFC6BD',
+    outline: '#999088',
+    outlineVariant: '#4A4540',
+    inverseSurface: '#E9E2DC',
+    inverseOnSurface: '#33302D',
+    inversePrimary: '#8B5000',
+    error: '#FFB4AB',
+    scrim: 'rgba(0,0,0,0.5)',
   },
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type ColorRole = keyof typeof Colors.light;
+export type Palette = { [K in ColorRole]: string };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+const family = Platform.select({ android: 'sans-serif', default: undefined });
+const medium = Platform.select({ android: 'sans-serif-medium', default: undefined });
+
+export const Type = {
+  headlineSmall: { fontFamily: family, fontSize: 24, lineHeight: 32, fontWeight: '400' },
+  titleLarge: { fontFamily: family, fontSize: 22, lineHeight: 28, fontWeight: '400' },
+  titleMedium: { fontFamily: medium, fontSize: 16, lineHeight: 24, fontWeight: '500', letterSpacing: 0.15 },
+  titleSmall: { fontFamily: medium, fontSize: 14, lineHeight: 20, fontWeight: '500', letterSpacing: 0.1 },
+  bodyLarge: { fontFamily: family, fontSize: 16, lineHeight: 24, fontWeight: '400', letterSpacing: 0.25 },
+  bodyMedium: { fontFamily: family, fontSize: 14, lineHeight: 20, fontWeight: '400', letterSpacing: 0.25 },
+  bodySmall: { fontFamily: family, fontSize: 12, lineHeight: 16, fontWeight: '400', letterSpacing: 0.4 },
+  labelLarge: { fontFamily: medium, fontSize: 14, lineHeight: 20, fontWeight: '500', letterSpacing: 0.1 },
+  labelMedium: { fontFamily: medium, fontSize: 12, lineHeight: 16, fontWeight: '500', letterSpacing: 0.5 },
+} satisfies Record<string, TextStyle>;
+
+export type TypeRole = keyof typeof Type;
 
 export const Spacing = {
   half: 2,
   one: 4,
   two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+  three: 12,
+  four: 16,
+  five: 24,
+  six: 32,
+  seven: 48,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const Radius = {
+  small: 8,
+  medium: 12,
+  large: 16,
+  extraLarge: 28,
+  full: 999,
+} as const;
+
+export const MaxContentWidth = 720;
