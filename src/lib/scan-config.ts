@@ -36,15 +36,17 @@ export async function removeScanRule(id: number): Promise<void> {
   await db.runAsync('DELETE FROM scan_rules WHERE id = ?', [id]);
 }
 
-// Effective scan config: defaults plus user rules. Excluding a folder removes
-// it from results after the next scan.
+// Effective scan config: defaults plus user rules. Any include rule switches
+// the scan to selected-roots mode; exclude rules are regex patterns matched
+// against storage-relative paths. Excluded folders disappear after a rescan.
 export async function loadScanConfig(): Promise<ScanConfig> {
   const rules = await listScanRules().catch(() => [] as ScanRule[]);
   const excludes = [...DEFAULT_SCAN.excludes, ...rules.filter((r) => r.mode === 'exclude').map((r) => r.path)];
   const includes = rules.filter((r) => r.mode === 'include').map((r) => r.path);
   return {
     ...DEFAULT_SCAN,
-    includeRoots: [...new Set([...DEFAULT_SCAN.includeRoots, ...includes])],
+    mode: includes.length > 0 ? 'selected' : 'wholePhone',
+    includeRoots: includes.length > 0 ? [...new Set(includes)] : DEFAULT_SCAN.includeRoots,
     excludes: [...new Set(excludes)],
   };
 }

@@ -89,19 +89,41 @@ object Scanner {
 
   fun enumerate(ctx: Context, cfg: ScanConfigArg): List<Candidate> {
     val found = linkedMapOf<String, Candidate>()
-    if (cfg.types.images) queryMedia(ctx, cfg, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image", found)
-    if (cfg.types.video) queryMedia(ctx, cfg, MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video", found)
-    if (cfg.types.audio) queryMedia(ctx, cfg, MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, "audio", found)
+    val rules = ExcludeRules(cfg.excludes)
+    if (cfg.types.images) queryMedia(ctx, cfg, rules, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image", found)
+    if (cfg.types.video) queryMedia(ctx, cfg, rules, MediaStore.Video.Media.EXTERNAL_CONTENT_URI, "video", found)
+    if (cfg.types.audio) queryMedia(ctx, cfg, rules, MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, "audio", found)
     if (cfg.types.documents) {
-      if (hasAllFilesAccess()) walkDocuments(cfg, found)
-      else queryDocuments(ctx, cfg, found)
+      if (hasAllFilesAccess()) walkDocuments(cfg, rules, found)
+      else queryDocuments(ctx, cfg, rules, found)
     }
     return found.values.toList()
+  }
+
+  private class ExcludeRules(patterns: List<String>) {
+    private val rules = patterns.map { raw ->
+      try {
+        Regex(raw.trim('/'), RegexOption.IGNORE_CASE)
+      } catch (t: Throwable) {
+        Log.w(TAG, "invalid exclude pattern '$raw', matching literally")
+        null
+      } to raw
+    }
+
+    fun matches(rel: String): Boolean {
+      val path = rel.replace('\\', '/').trim('/')
+      if (path.isEmpty()) return false
+      return rules.any { (rx, raw) ->
+        if (rx != null) rx.containsMatchIn(path)
+        else path.contains(raw.trim('/'), ignoreCase = true)
+      }
+    }
   }
 
   private fun queryMedia(
     ctx: Context,
     cfg: ScanConfigArg,
+    rules: ExcludeRules,
     uri: android.net.Uri,
     kind: String,
     out: MutableMap<String, Candidate>
@@ -125,7 +147,7 @@ object Scanner {
           val path = c.getString(1) ?: continue
           if (!File(path).exists()) continue
           val rel = (c.getString(3) ?: "").trimEnd('/')
-          if (excluded(rel, cfg)) continue
+          if (excluded(rel, cfg, rules)) continue
           val size = c.getLong(4)
           if (kind == "image" && cfg.minImageBytes > 0 && size < cfg.minImageBytes) continue
           val id = c.getLong(0)
@@ -152,7 +174,7 @@ object Scanner {
     }
   }
 
-  private fun queryDocuments(ctx: Context, cfg: ScanConfigArg, out: MutableMap<String, Candidate>) {
+  private fun queryDocuments(ctx: Context, cfg: ScanConfigArg, rules: ExcludeRules, out: MutableMap<String, Candidate>) {
     try {
       ctx.contentResolver.query(
         MediaStore.Files.getContentUri("external"),
@@ -173,7 +195,7 @@ object Scanner {
           val kind = docExts[ext] ?: continue
           if (!File(path).exists()) continue
           val rel = (c.getString(3) ?: "").trimEnd('/')
-          if (excluded(rel, cfg)) continue
+          if (excluded(rel, cfg, rules)) continue
           val size = c.getLong(4)
           if (cfg.maxDocBytes > 0 && size > cfg.maxDocBytes) continue
           out[path] = Candidate(
@@ -194,7 +216,7 @@ object Scanner {
     }
   }
 
-  private fun walkDocuments(cfg: ScanConfigArg, out: MutableMap<String, Candidate>) {
+  private fun walkDocuments(cfg: ScanConfigArg, rules: ExcludeRules, out: MutableMap<String, Candidate>) {
     val root = Environment.getExternalStorageDirectory() ?: return
     val roots = if (cfg.includeRoots.isEmpty()) listOf(root) else cfg.includeRoots.map { File(root, it) }
     var count = 0
@@ -208,7 +230,7 @@ object Scanner {
           if (dir.name.startsWith(".")) return@onEnter false
           if (dir.name.lowercase() in skipDirs && dir.parentFile == root) return@onEnter false
           if (cfg.respectNomedia && File(dir, ".nomedia").exists()) return@onEnter false
-          if (excluded(relTo(root, dir), cfg)) return@onEnter false
+          if (excluded(relTo(root, dir), cfg, rules)) return@onEnter false
           count++ < MAX_WALK_FILES
         }
         .filter { it.isFile }
@@ -238,7 +260,7 @@ object Scanner {
   private fun relTo(root: File, dir: File?): String =
     dir?.relativeToOrSelf(root)?.path?.replace('\\', '/')?.trim('/') ?: ""
 
-  private fun excluded(rel: String, cfg: ScanConfigArg): Boolean {
+  private fun excluded(rel: String, cfg: ScanConfigArg, rules: ExcludeRules): Boolean {
     if (rel.isEmpty()) return false
     val norm = rel.lowercase().trim('/')
     if (cfg.mode == "selected" && cfg.includeRoots.isNotEmpty()) {
@@ -247,7 +269,7 @@ object Scanner {
       }
       if (!included) return true
     }
-    return cfg.excludes.any { norm.contains(it.lowercase().trim('/')) }
+    return rules.matches(rel)
   }
 
   private fun mimeFor(ext: String): String = when (ext) {

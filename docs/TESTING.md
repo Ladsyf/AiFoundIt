@@ -74,7 +74,9 @@ Turn on **airplane mode** before the first query and leave it on:
 ## 7. Settings
 
 - **Models** → lists model files with sizes; Import adds one; delete removes it.
-- **Scan folders** → "Exclude Private" adds a rule. Rescan → files under `Private/` no longer appear in results.
+- **Scan folders** → shows the scan root ("Internal storage" = whole phone).
+- **Exclusions are regex** matched against each file's folder path relative to storage root. `private|bank` excludes any folder containing either word; `^whatsapp/` anchors to a top-level folder; `\.statuses` matches the literal folder. Plain names like `private` still work (substring). Invalid patterns are rejected inline; a pattern that won't compile falls back to literal matching instead of crashing the scan.
+- Removing an exclusion + Rescan brings its files back; adding one + Rescan removes them from results (they are never opened during indexing).
 - **Index** → file count and index size; **Delete index** empties everything (next scan rebuilds).
 - **Privacy** → bytes-sent counter.
 

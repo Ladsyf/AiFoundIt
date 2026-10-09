@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,8 @@ import { deleteIndex, indexSizeBytes } from '@/lib/db/files';
 import { formatBytes } from '@/lib/format';
 import { deleteModelFile, detectModelConfig, importModelFile, type ModelFile } from '@/lib/models';
 import { native } from '@/lib/native';
-import { addScanRule, listScanRules, removeScanRule, type ScanRule } from '@/lib/scan-config';
+import { normalizeExcludePattern, validateExcludePattern } from '@/lib/patterns';
+import { addScanRule, DEFAULT_SCAN, listScanRules, removeScanRule, type ScanRule } from '@/lib/scan-config';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const theme = useTheme();
@@ -50,6 +51,8 @@ export function SettingsScreen() {
   const [bytesSent, setBytesSent] = useState<number | null>(null);
   const [indexSize, setIndexSize] = useState(0);
   const [note, setNote] = useState<string | null>(null);
+  const [excludeInput, setExcludeInput] = useState('');
+  const [inputError, setInputError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     const { files } = await detectModelConfig();
@@ -67,6 +70,20 @@ export function SettingsScreen() {
   const exclude = async (path: string) => {
     await addScanRule(path, 'exclude');
     await reload();
+  };
+
+  const excludeRules = rules.filter((r) => r.mode === 'exclude');
+
+  const addExclude = async (raw: string) => {
+    const pattern = normalizeExcludePattern(raw);
+    const err = validateExcludePattern(raw);
+    if (err) {
+      setInputError(err);
+      return;
+    }
+    setInputError(null);
+    setExcludeInput('');
+    await exclude(pattern);
   };
 
   return (
@@ -114,29 +131,54 @@ export function SettingsScreen() {
       </Section>
 
       <Section title="Scan folders">
+        <Row label="Scan root" value="Internal storage" />
         <Text variant="bodySmall" color="onSurfaceVariant">
-          Whole-phone scan with default exclusions. Excluded folders are removed from results after the next rescan
-          and are never opened.
+          Scans the whole phone. Add a pattern below to skip matching folders.
         </Text>
-        {rules.map((r) => (
+
+        <Text variant="bodySmall" color="onSurfaceVariant">
+          Exclusions are regex patterns matched against each file&rsquo;s folder. Defaults:{' '}
+          {DEFAULT_SCAN.excludes.join(' · ')}
+        </Text>
+        {excludeRules.map((r) => (
           <View key={r.id} style={styles.row}>
             <Text variant="bodyMedium" numberOfLines={1} style={styles.flex}>
-              {r.mode === 'exclude' ? 'Excluded' : 'Included'} · {r.path}
+              Exclude · /{r.path}/
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Remove rule for ${r.path}`}
+              accessibilityLabel={`Remove exclusion ${r.path}`}
               onPress={() => void removeScanRule(r.id).then(reload)}
               style={styles.iconBtn}>
               <Icon name="close" size={20} color={theme.onSurfaceVariant} />
             </Pressable>
           </View>
         ))}
-        <View style={styles.rowButtons}>
-          <Button label="Exclude Private" variant="text" onPress={() => void exclude('Private')} />
-          <Button label="Exclude Bank" variant="text" onPress={() => void exclude('Bank')} />
-          <Button label="Exclude .Statuses" variant="text" onPress={() => void exclude('.Statuses')} />
+        <View style={styles.inputRow}>
+          <TextInput
+            value={excludeInput}
+            onChangeText={(t) => {
+              setExcludeInput(t);
+              setInputError(null);
+            }}
+            onSubmitEditing={() => void addExclude(excludeInput)}
+            placeholder="Exclude pattern, e.g. private|bank"
+            placeholderTextColor={theme.onSurfaceVariant}
+            style={[styles.input, { color: theme.onSurface, borderColor: theme.outlineVariant }]}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="done"
+          />
+          <Button label="Add" variant="tonal" onPress={() => void addExclude(excludeInput)} />
         </View>
+        {inputError && (
+          <Text variant="bodySmall" color="error">
+            {inputError}
+          </Text>
+        )}
+        <Text variant="bodySmall" color="onSurfaceVariant">
+          Excluded folders are never opened and disappear from results after the next rescan.
+        </Text>
       </Section>
 
       <Section title="Index">
@@ -202,6 +244,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: Radius.medium,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    minHeight: 44,
   },
   iconBtn: {
     padding: Spacing.two,
