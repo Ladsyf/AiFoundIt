@@ -39,6 +39,50 @@ describe('heuristicPlan', () => {
     expect(plan.includeSensitive).toBe(true);
   });
 
+  it('helper words of a question are not content terms', () => {
+    expect(heuristicPlan('Do I have job offer documents?').terms).toEqual(['job', 'offer']);
+    expect(heuristicPlan('pwede mo bang ayusin yung files ko').terms).toEqual(['ayusin']);
+  });
+
+  it('a greeting is chat, not a search', () => {
+    for (const hello of ['Hi', 'hello po', 'Kumusta', 'good morning', 'thanks!', 'hi can you help']) {
+      expect(heuristicPlan(hello).intent).toBe('chat');
+    }
+  });
+
+  it('a name introduction or a question about the chat is small talk, not a search', () => {
+    for (const talk of [
+      'My name is Almar',
+      'Hi I’m Almar',
+      "I'm Almar Javier",
+      'ako si Almar',
+      'What is my name?',
+      'sino ako',
+      'what did I ask earlier',
+    ]) {
+      const plan = heuristicPlan(talk);
+      expect(plan.intent).toBe('chat');
+      expect(plan.chat).toBe('talk');
+    }
+    expect(heuristicPlan('Hi').chat).toBe('greeting');
+  });
+
+  it('mentioning your name while looking for a file is still a search', () => {
+    expect(heuristicPlan('my name is on the contract pdf').intent).toBe('find');
+    expect(heuristicPlan('I am looking for my passport photo').intent).not.toBe('chat');
+  });
+
+  it('date words are not content terms', () => {
+    expect(heuristicPlan('receipts this week').terms).toEqual([]);
+    expect(heuristicPlan('jollibee yesterday').terms).toEqual(['jollibee']);
+  });
+
+  it('a greeting with something to look for is still a search', () => {
+    const plan = heuristicPlan('hi, the jollibee receipt');
+    expect(plan.intent).toBe('find');
+    expect(plan.terms).toContain('jollibee');
+  });
+
   it('existence question about IDs is the privacy intent', () => {
     const plan = heuristicPlan('May picture ba ako ng ID ko?');
     expect(plan.intent).toBe('privacy');

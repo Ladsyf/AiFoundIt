@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 
 import type { SnackbarMessage } from '@/components/ui/snackbar';
 import type {
@@ -9,6 +10,7 @@ import type {
   PlanResult,
   SearchResult,
 } from '@/features/search/types';
+import { AUTO_CHECK_MS, shouldAutoScan } from '@/lib/auto-index';
 import { enableBackgroundByDefault, setBackgroundEnabled, syncBackground } from '@/lib/background';
 import { getDb } from '@/lib/db/db';
 import { countFiles, getMetaValue, setMetaValue } from '@/lib/db/files';
@@ -25,13 +27,16 @@ import {
   undoBatch,
 } from '@/lib/intents/organize';
 import { receiptTotal } from '@/lib/intents/totals';
+import { generateText } from '@/lib/llm';
 import { onModelsChanged } from '@/lib/models';
 import { addNativeListener, isMockNative, native } from '@/lib/native';
 import type { FileOpResult, IndexStatus } from '@/lib/native/contract';
 import { configureNative } from '@/lib/native-setup';
 import { relativeFolderOf } from '@/lib/scan-paths';
-import { streamAnswer, templatedAnswer } from '@/lib/search/answer';
-import { planQuery } from '@/lib/search/plan';
+import { streamAnswer, streamChat, templatedAnswer } from '@/lib/search/answer';
+import { withFollowUp } from '@/lib/search/followup';
+import { recentTurns, renderTurns } from '@/lib/search/history';
+import { planQuery, type QueryPlan } from '@/lib/search/plan';
 import { retrieve } from '@/lib/search/retrieve';
 import { PRIVATE_FOLDER, RECEIPTS_FOLDER } from '@/lib/search/vocab';
 
@@ -89,6 +94,8 @@ type Action =
     }
   | { type: 'planToggle'; conversationId: string; assistantId: string; opId: string }
   | { type: 'snackbar'; message: SnackbarMessage | null };
+
+const GREETING = 'Hi! Tell me what you’re looking for, like “the Jollibee receipt” or “beach photo”.';
 
 const NO_BACKENDS: BackendState = { embedder: 'none', llm: 'none', llmLoading: false };
 
@@ -249,7 +256,7 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-type ScanOptions = { reembed?: boolean };
+type ScanOptions = { reembed?: boolean; quiet?: boolean };
 
 type SearchStore = State & {
   activeConversation: Conversation | null;
@@ -280,14 +287,32 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   const fileCache = useRef(new Map<string, FileItem>());
   const batches = useRef(new Map<string, FileOpResult[]>());
   const lastResults = useRef(new Map<string, FileItem[]>());
+  const lastPlans = useRef(new Map<string, QueryPlan>());
   const configuring = useRef<Promise<unknown> | null>(null);
   const scanning = useRef(false);
+  const quietScan = useRef(false);
+  const lastGeneration = useRef(-1);
+  const lastAutoScanAt = useRef(0);
   const polling = useRef(false);
   const lastMergeAt = useRef(0);
 
   useEffect(() => {
     stateRef.current = state;
   });
+
+  useEffect(() => {
+    if (!state.indexing) return;
+    const timer = setInterval(() => {
+      if (scanning.current) return;
+      void native
+        .getStatus()
+        .then((status) => {
+          if (!status.running && !scanning.current) dispatch({ type: 'index', done: 0, total: 0, running: false });
+        })
+        .catch(() => {});
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [state.indexing]);
 
   const cacheFiles = useCallback((items: FileItem[]) => {
     for (const f of items) fileCache.current.set(f.id, f);
@@ -346,6 +371,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const subs = [
       addNativeListener('onIndexProgress', (p) => {
+        if (!scanning.current || (quietScan.current && p.total === 0)) return;
         dispatch({ type: 'index', done: p.done, total: p.total, running: true });
         // Show results while the scan is still running, not only when it ends.
         const now = Date.now();
@@ -383,11 +409,13 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     async (options: ScanOptions = {}) => {
       if (scanning.current) return;
       scanning.current = true;
-      dispatch({ type: 'index', done: 0, total: 0, running: true });
+      quietScan.current = options.quiet === true;
+      if (!quietScan.current) dispatch({ type: 'index', done: 0, total: 0, running: true });
       try {
         const { models } = await configureModels();
         const used = models.active.embedder?.name ?? '';
         const previous = (await getMetaValue(EMBEDDER_FILE_KEY)) ?? '';
+        if (options.quiet && used !== previous) return;
         // Vectors from different search models cannot be compared, so a new search model means indexing again.
         if (options.reembed || (used !== previous && (await countFiles()) > 0)) await prepareReembed();
         // From here on, vectors in the index come from this search model. This is saved before the scan runs, so a
@@ -398,12 +426,54 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         await enableBackgroundByDefault();
       } finally {
         scanning.current = false;
+        quietScan.current = false;
         dispatch({ type: 'index', done: 0, total: 0, running: false });
         void refreshCounts();
       }
     },
     [configureModels, refreshCounts],
   );
+
+  const autoIndexReady = state.access === 'granted' && state.fileCount > 0;
+
+  useEffect(() => {
+    if (!autoIndexReady) return;
+    const look = async (comingBack: boolean) => {
+      await configuring.current;
+      if (AppState.currentState !== 'active') return;
+      void requestMerge((result) => {
+        if (result.merged + result.deleted > 0) void refreshCounts();
+      });
+      if (scanning.current) return;
+      let generation = -1;
+      try {
+        generation = native.mediaGeneration();
+      } catch {
+        generation = -1;
+      }
+      const now = Date.now();
+      const due = shouldAutoScan({
+        generation,
+        lastGeneration: lastGeneration.current,
+        comingBack,
+        now,
+        lastScanAt: lastAutoScanAt.current,
+      });
+      if (!due) return;
+      lastGeneration.current = generation;
+      lastAutoScanAt.current = now;
+      await startScan({ quiet: true }).catch(() => {});
+    };
+    void look(true);
+    const timer = setInterval(() => void look(false), AUTO_CHECK_MS);
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void look(true);
+    });
+    return () => {
+      clearInterval(timer);
+      sub.remove();
+    };
+  }, [autoIndexReady, startScan, refreshCounts]);
 
   // A model was downloaded, imported, chosen or deleted.
   const reloadModels = useCallback(async () => {
@@ -458,6 +528,15 @@ export function SearchProvider({ children }: { children: ReactNode }) {
     [refreshCounts],
   );
 
+  const historyFor = useCallback((conversationId: string, assistantId: string) => {
+    const messages = stateRef.current.conversations.find((c) => c.id === conversationId)?.messages ?? [];
+    const at = messages.findIndex((m) => m.id === assistantId);
+    const earlier = at >= 0 ? messages.slice(0, Math.max(0, at - 1)) : messages;
+    return recentTurns(earlier, (m) =>
+      m.results.map((r) => fileCache.current.get(r.fileId)?.name).filter((name): name is string => !!name),
+    );
+  }, []);
+
   const runQuery = useCallback(
     async (conversationId: string, assistantId: string, query: string) => {
       const started = Date.now();
@@ -479,7 +558,27 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         const plannerReady = snapshot.backends.llm !== 'none';
         // The answer waits for the model to finish loading, because a chat model is chosen.
         const answerReady = snapshot.llmConfigured;
-        const plan = await planQuery(query, { llmAvailable: plannerReady });
+        const turns = historyFor(conversationId, assistantId);
+        const history = renderTurns(turns);
+        const previousQuestion = turns.filter((t) => t.role === 'person').at(-1)?.text;
+        const asked = await planQuery(query, {
+          generate: plannerReady ? generateText : undefined,
+          previous: previousQuestion,
+        });
+        const plan = withFollowUp(asked, lastPlans.current.get(conversationId), query);
+        if (plan.intent === 'find') lastPlans.current.set(conversationId, plan);
+
+        if (plan.intent === 'chat') {
+          const say = (text: string, streaming = false) =>
+            dispatch({ type: 'results', conversationId, assistantId, results: [], text, streaming });
+          if (plan.chat === 'greeting' || !answerReady) {
+            say(GREETING);
+            return;
+          }
+          const reply = await streamChat(query, { history, onToken: (text) => say(text, true) });
+          say(reply ?? GREETING);
+          return;
+        }
 
         if (plan.intent === 'compute') {
           const { total, items } = await receiptTotal({
@@ -577,6 +676,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         if (answerReady && results.length > 0) {
           text = await streamAnswer(query, results, {
             llmAvailable: true,
+            history,
             onToken: (accumulated) =>
               dispatch({
                 type: 'results',
@@ -597,7 +697,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         await finish(`Something went wrong while searching: ${e instanceof Error ? e.message : String(e)}`);
       }
     },
-    [cacheFiles, proofLine],
+    [cacheFiles, historyFor, proofLine],
   );
 
   const send = useCallback(

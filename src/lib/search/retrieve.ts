@@ -1,9 +1,12 @@
+import type { SQLiteDatabase } from 'expo-sqlite';
+
 import type { FileItem } from '@/features/search/types';
 import { getDb, vecAvailable } from '@/lib/db/db';
 import { fileRowsByIds, rowToItem, tagsFor, type FileRow } from '@/lib/db/files';
 import { formatDate } from '@/lib/format';
 import { native } from '@/lib/native';
 import type { QueryPlan } from '@/lib/search/plan';
+import { backgroundOf, standsOut, zScore, type Background } from '@/lib/search/relevance';
 import { rrfByFile, type Ranked } from '@/lib/search/rrf';
 import { makeSnippet } from '@/lib/search/snippet';
 import { buildFtsQuery } from '@/lib/search/tokenize';
@@ -11,18 +14,54 @@ import { bytesToFloat32, cosineSimilarity, float32ToBytes } from '@/lib/vector';
 
 const RRF_K = 60;
 const TOP_CHUNKS = 50;
+const VEC_CANDIDATES = 200;
+const FTS_KEEP_OF_BEST = 0.35;
 const TOP_FILES = 10;
-// Cosine similarity limits for a file found only by meaning (its words did not match). sqlite-vec
-// reports distance = 1 - similarity. Text-to-image similarity is much lower than text-to-text, so these
-// start low and are tightened by looking at real numbers: debug builds log them (see retrieve below).
+// A file found only by meaning must stand clear of how similar this query is to the rest of the index
+// (see relevance.ts). The fixed limits below only apply to an index too small to measure that.
 const VEC_MIN_SIMILARITY = 0.12;
-// A vector-only hit must also be at least this fraction of the best vector hit, which trims the long tail.
 const VEC_KEEP_OF_BEST = 0.6;
+const BACKGROUND_SAMPLE = 256;
 
-function vecPasses(distance: number | undefined, bestSimilarity: number): boolean {
-  if (distance === undefined) return false;
-  const similarity = 1 - distance;
-  return similarity >= VEC_MIN_SIMILARITY && similarity >= bestSimilarity * VEC_KEEP_OF_BEST;
+type Group = 'words' | 'pictures';
+type Backgrounds = Record<Group, Background | null>;
+
+const groupOf = (kind: string): Group => (kind === 'image' || kind === 'frame' ? 'pictures' : 'words');
+
+const NO_BACKGROUND: Backgrounds = { words: null, pictures: null };
+
+let sampleCache: { key: string; words: Float32Array[]; pictures: Float32Array[] } | null = null;
+
+async function indexSample(db: SQLiteDatabase) {
+  const stamp = await db.getFirstAsync<{ n: number; last: number | null }>(
+    'SELECT COUNT(*) AS n, MAX(id) AS last FROM chunks WHERE embedding IS NOT NULL',
+  );
+  const key = `${stamp?.n ?? 0}:${stamp?.last ?? 0}`;
+  if (sampleCache?.key === key) return sampleCache;
+  const load = async (kinds: string[]) => {
+    const rows = await db.getAllAsync<{ embedding: Uint8Array }>(
+      `SELECT embedding FROM chunks WHERE embedding IS NOT NULL AND kind IN (${kinds.map(() => '?').join(',')})
+       ORDER BY RANDOM() LIMIT ?`,
+      [...kinds, BACKGROUND_SAMPLE],
+    );
+    return rows.map((r) => bytesToFloat32(r.embedding));
+  };
+  sampleCache = {
+    key,
+    words: await load(['text', 'description']),
+    pictures: await load(['image', 'frame']),
+  };
+  return sampleCache;
+}
+
+async function backgroundsFor(db: SQLiteDatabase, query: Float32Array): Promise<Backgrounds> {
+  try {
+    const sample = await indexSample(db);
+    const sims = (vectors: Float32Array[]) => vectors.map((v) => cosineSimilarity(query, v));
+    return { words: backgroundOf(sims(sample.words)), pictures: backgroundOf(sims(sample.pictures)) };
+  } catch {
+    return NO_BACKGROUND;
+  }
 }
 
 export type RetrievedFile = {
@@ -56,31 +95,35 @@ async function ftsRank(plan: QueryPlan): Promise<RankedList> {
        ORDER BY score LIMIT ?`,
       [match, TOP_CHUNKS],
     );
+    const strongest = rows.length > 0 ? -rows[0].score : 0;
+    const strong = rows.filter((r) => -r.score >= strongest * FTS_KEEP_OF_BEST);
     const list: RankedList = new Map();
-    rows.forEach((r, i) => list.set(r.chunkId, { chunk: r, rank: i + 1 }));
+    strong.forEach((r, i) => list.set(r.chunkId, { chunk: r, rank: i + 1 }));
     return list;
   } catch {
     return new Map();
   }
 }
 
-async function vecRank(plan: QueryPlan): Promise<RankedList> {
-  const db = await getDb();
-  let query: Float32Array;
+async function embedQuery(plan: QueryPlan): Promise<Float32Array | null> {
   try {
-    query = Float32Array.from(await native.embedText(plan.queryEn || plan.terms.join(' ')));
+    return Float32Array.from(await native.embedText(plan.queryEn || plan.terms.join(' ')));
   } catch {
-    return new Map();
+    return null;
   }
+}
 
-  const list: RankedList = new Map();
+type VecHit = { chunk: ChunkHit; distance: number };
+
+async function vecCandidates(query: Float32Array): Promise<VecHit[]> {
+  const db = await getDb();
   if (vecAvailable) {
     try {
       const rows = await db.getAllAsync<{ chunkId: number; distance: number }>(
         `SELECT rowid AS chunkId, distance FROM chunks_vec WHERE embedding MATCH ? AND k = ?`,
-        [float32ToBytes(query), TOP_CHUNKS],
+        [float32ToBytes(query), VEC_CANDIDATES],
       );
-      if (rows.length === 0) return list;
+      if (rows.length === 0) return [];
       const ids = rows.map((r) => r.chunkId);
       const marks = ids.map(() => '?').join(',');
       const chunks = await db.getAllAsync<ChunkHit>(
@@ -89,11 +132,10 @@ async function vecRank(plan: QueryPlan): Promise<RankedList> {
         ids,
       );
       const byId = new Map(chunks.map((c) => [c.chunkId, c]));
-      rows.forEach((r, i) => {
+      return rows.flatMap((r) => {
         const chunk = byId.get(r.chunkId);
-        if (chunk) list.set(r.chunkId, { chunk, rank: i + 1, distance: r.distance });
+        return chunk ? [{ chunk, distance: r.distance }] : [];
       });
-      return list;
     } catch {
       // fall through to brute force
     }
@@ -103,13 +145,35 @@ async function vecRank(plan: QueryPlan): Promise<RankedList> {
     `SELECT id AS chunkId, file_id AS fileId, kind, text, page, start_ms AS startMs, end_ms AS endMs, embedding
      FROM chunks WHERE embedding IS NOT NULL`,
   );
-  const scored = rows
-    .map((r) => ({ r, sim: r.embedding ? cosineSimilarity(query, bytesToFloat32(r.embedding)) : 0 }))
-    .filter((s) => s.sim > VEC_MIN_SIMILARITY)
+  return rows
+    .map((r) => ({ chunk: r as ChunkHit, sim: r.embedding ? cosineSimilarity(query, bytesToFloat32(r.embedding)) : 0 }))
     .sort((a, b) => b.sim - a.sim)
-    .slice(0, TOP_CHUNKS);
-  scored.forEach((s, i) => list.set(s.r.chunkId, { chunk: s.r, rank: i + 1, distance: 1 - s.sim }));
-  return list;
+    .slice(0, VEC_CANDIDATES)
+    .map((s) => ({ chunk: s.chunk, distance: 1 - s.sim }));
+}
+
+type Judged = VecHit & { sim: number; z: number | null };
+
+// Keeps only the chunks that are really about the question. Words and pictures score on different scales, so each
+// is judged against its own background and ranked by how far it stands above it.
+function selectByMeaning(candidates: VecHit[], background: Backgrounds): { list: RankedList; judged: Judged[] } {
+  const judged: Judged[] = candidates.map((h) => {
+    const sim = 1 - h.distance;
+    const bg = background[groupOf(h.chunk.kind)];
+    return { ...h, sim, z: bg ? zScore(sim, bg) : null };
+  });
+  const measured = judged.filter((h): h is Judged & { z: number } => h.z !== null).sort((a, b) => b.z - a.z);
+  const bestZ = measured[0]?.z ?? -Infinity;
+  const unmeasured = judged.filter((h) => h.z === null && h.sim >= VEC_MIN_SIMILARITY).sort((a, b) => b.sim - a.sim);
+  const bestUnmeasured = unmeasured[0]?.sim ?? 0;
+
+  const kept = [
+    ...measured.filter((h) => standsOut(h.z, bestZ)),
+    ...unmeasured.filter((h) => h.sim >= bestUnmeasured * VEC_KEEP_OF_BEST),
+  ].slice(0, TOP_CHUNKS);
+  const list: RankedList = new Map();
+  kept.forEach((h, i) => list.set(h.chunk.chunkId, { chunk: h.chunk, rank: i + 1, distance: h.distance }));
+  return { list, judged: [...measured, ...unmeasured] };
 }
 
 function passesFilters(row: FileRow, plan: QueryPlan): boolean {
@@ -172,7 +236,10 @@ export async function retrieve(plan: QueryPlan): Promise<RetrievedFile[]> {
   }
 
   const db = await getDb();
-  const [fts, vec] = await Promise.all([ftsRank(plan), vecRank(plan)]);
+  const [fts, query] = await Promise.all([ftsRank(plan), embedQuery(plan)]);
+  const candidates = query ? await vecCandidates(query) : [];
+  const background = query ? await backgroundsFor(db, query) : NO_BACKGROUND;
+  const { list: vec, judged } = selectByMeaning(candidates, background);
 
   // RRF by file: best chunk rank per list, summed.
   const toRanked = (list: RankedList): Ranked[] =>
@@ -192,16 +259,15 @@ export async function retrieve(plan: QueryPlan): Promise<RetrievedFile[]> {
     if (best) files.set(fileId, { score: fs.score, best, distance: fs.distance });
   }
 
-  const bestSimilarity = [...vec.values()].reduce(
-    (best, v) => Math.max(best, v.distance === undefined ? 0 : 1 - v.distance),
-    0,
-  );
   if (__DEV__) {
-    const top = [...vec.values()]
-      .slice(0, 8)
-      .map((v) => (v.distance === undefined ? '?' : (1 - v.distance).toFixed(3)))
+    const top = judged
+      .slice(0, 12)
+      .map((h) => `${h.chunk.kind[0]}${h.sim.toFixed(3)}/${h.z === null ? '?' : h.z.toFixed(1)}`)
       .join(' ');
-    console.log(`[search] "${plan.queryEn}" keyword hits ${fts.size}, vector hits ${vec.size}, best similarities: ${top}`);
+    const bg = (b: Background | null) => (b ? `${b.mean.toFixed(3)}±${b.std.toFixed(3)}` : 'none');
+    console.log(
+      `[search] "${plan.queryEn}" keyword hits ${fts.size}, kept by meaning ${vec.size}, background words ${bg(background.words)} pictures ${bg(background.pictures)}, top sim/z: ${top}`,
+    );
   }
 
   // Words were asked for and nothing matched them: say so, instead of listing files that merely pass a filter.
@@ -225,7 +291,6 @@ export async function retrieve(plan: QueryPlan): Promise<RetrievedFile[]> {
       score += 0.004 * Math.exp(-ageDays / 90);
       return { id, row, entry, score };
     })
-    .filter(({ entry }) => fts.has(entry.best.chunkId) || vecPasses(entry.distance, bestSimilarity))
     .sort((a, b) => b.score - a.score)
     .slice(0, TOP_FILES);
 

@@ -122,6 +122,7 @@ export function createMockNative(): AiFoundItNative & {
   const api: AiFoundItNative = {
     getModelsDir: () => modelsDir,
     hasAllFilesAccess: () => true,
+    mediaGeneration: () => -1,
     openAllFilesAccessSettings: async () => {},
     openBatterySettings: async () => {},
     configure: async (_scan: ScanConfig, _models: ModelConfig) => status,

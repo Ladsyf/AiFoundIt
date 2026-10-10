@@ -1,16 +1,8 @@
 {
-  "name": "work",
+  "name": "aifoundit-pitch-video",
+  "private": true,
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "puppeteer-core": "^25.13.0"
+    "puppeteer-core": "^24.43.1"
   }
 }

@@ -1,8 +1,10 @@
 import { findMerchant } from '@/lib/enrich/facts';
 import { sanitizeDestination } from '@/lib/intents/destination';
+import type { generateText } from '@/lib/llm';
 import type { FileKind } from '@/lib/native/contract';
 import { contentTerms, dateRangeFor, tokenize } from '@/lib/search/tokenize';
 import {
+    CHITCHAT_WORDS,
     COMPUTE_WORDS,
     COUNT_WORDS,
     DESCRIBE_WORDS,
@@ -10,13 +12,15 @@ import {
     PRIVACY_WORDS,
     PRIVATE_FOLDER,
     RECEIPTS_FOLDER,
+    STOPWORDS,
     TIDY_WORDS,
 } from '@/lib/search/vocab';
 
-export type Intent = 'find' | 'compute' | 'count' | 'describe' | 'organize' | 'privacy';
+export type Intent = 'find' | 'compute' | 'count' | 'describe' | 'organize' | 'privacy' | 'chat';
 
 export type QueryPlan = {
   intent: Intent;
+  chat?: 'greeting' | 'talk';
   queryEn: string;
   terms: string[];
   kinds?: FileKind[];
@@ -29,6 +33,11 @@ export type QueryPlan = {
   destination?: string;
   includeSensitive: boolean;
 };
+
+const NAME_STATEMENT =
+  /^\s*(?:(?:hi|hello|hey|kumusta)[,!.\s]+)?(?:my name is|call me|i am|i'm|i’m|im|ako si|ako po si|ang pangalan ko(?: ay)?)\s+[A-Za-zÀ-ÿ'’-]+(?:\s+[A-Za-zÀ-ÿ'’-]+){0,2}\s*[.!]*\s*$/i;
+const ABOUT_CHAT =
+  /\b(?:what(?:'s|s| is) my name|who am i|do you remember|what did i (?:say|ask|tell)|ano (?:ang )?pangalan ko|sino ako|naaalala mo)\b/i;
 
 const ID_TERMS = new Set(['id', 'ids', 'philhealth', 'passport', 'umid', 'sss', 'tin', 'philsys', 'license']);
 const QUESTION_MARKERS = new Set(['ba', 'do', 'does', 'any', 'meron', 'mayroon', 'may', 'is', 'there']);
@@ -55,8 +64,14 @@ export function heuristicPlan(query: string, today = new Date()): QueryPlan {
     [...PRIVACY_WORDS].some((w) => tokens.includes(w)) || tokens.some((t) => ID_TERMS.has(t));
   const asksExistence = tokens.some((t) => QUESTION_MARKERS.has(t));
 
+  const spoken = tokens.filter((t) => !STOPWORDS.has(t));
+  const greeting = spoken.length > 0 && spoken.every((t) => CHITCHAT_WORDS.has(t));
+  const talk = !greeting && (NAME_STATEMENT.test(query) || ABOUT_CHAT.test(query));
+  const chat: QueryPlan['chat'] = greeting ? 'greeting' : talk ? 'talk' : undefined;
+
   let intent: Intent = 'find';
-  if (tokens.some((t) => COMPUTE_WORDS.has(t))) intent = 'compute';
+  if (chat) intent = 'chat';
+  else if (tokens.some((t) => COMPUTE_WORDS.has(t))) intent = 'compute';
   else if (tokens.some((t) => COUNT_WORDS.has(t))) intent = 'count';
   else if (tokens.some((t) => TIDY_WORDS.has(t))) intent = 'organize';
   else if (tokens.some((t) => DESCRIBE_WORDS.has(t))) intent = 'describe';
@@ -71,6 +86,7 @@ export function heuristicPlan(query: string, today = new Date()): QueryPlan {
 
   return {
     intent,
+    chat,
     queryEn: query,
     terms,
     kinds,
@@ -125,7 +141,7 @@ export function parsePlanJson(raw: string, fallback: QueryPlan): QueryPlan {
   }
 }
 
-const PLAN_PROMPT = (query: string, today: string) =>
+const PLAN_PROMPT = (query: string, today: string, previous?: string) =>
   `You plan file searches on a phone. Today is ${today}. ` +
   `Read the question (English or Taglish) and reply with JSON only, matching this shape: ${PLAN_SCHEMA}\n\n` +
   `Q: Nasaan yung resibo ko sa Jollibee?\n` +
@@ -134,20 +150,21 @@ const PLAN_PROMPT = (query: string, today: string) =>
   `{"intent":"compute","queryEn":"GCash receipts","keywords":["gcash"],"kinds":[],"dateFrom":null,"dateTo":null,"category":"receipt","operation":null,"destination":null}\n` +
   `Q: Ilagay mo lahat ng resibo sa isang folder\n` +
   `{"intent":"organize","queryEn":"receipts","keywords":["receipt"],"kinds":[],"dateFrom":null,"dateTo":null,"category":"receipt","operation":"move","destination":"Documents/Receipts"}\n` +
+  (previous ? `Earlier in this chat the person asked: ${previous}\n` : '') +
   `Q: ${query}\n`;
 
-// LLM plan when a model is loaded and the query is long enough to benefit;
+// LLM plan when a generator is given (a model is loaded) and the query is long enough to benefit;
 // heuristic plan otherwise. Always resolves with a usable plan.
-export async function planQuery(query: string, opts: { llmAvailable: boolean; today?: Date }): Promise<QueryPlan> {
+export async function planQuery(
+  query: string,
+  opts: { generate?: typeof generateText; today?: Date; previous?: string },
+): Promise<QueryPlan> {
   const fallback = heuristicPlan(query, opts.today);
-  if (!opts.llmAvailable || tokenize(query).length <= 3) return fallback;
+  if (!opts.generate || tokenize(query).length <= 3) return fallback;
 
   const today = (opts.today ?? new Date()).toISOString().slice(0, 10);
-  // Loaded lazily so heuristicPlan/parsePlanJson stay usable without the
-  // native bridge (unit tests, Expo Go fallback).
-  const { generateText } = await import('@/lib/llm');
-  const outcome = await generateText(
-    { prompt: PLAN_PROMPT(query, today), maxTokens: 160, temperature: 0.1 },
+  const outcome = await opts.generate(
+    { prompt: PLAN_PROMPT(query, today, opts.previous), maxTokens: 160, temperature: 0.1 },
     // The plan must not hold up the results: a first word within 4 s, and the whole plan within 6 s, or the
     // keyword planner is used instead.
     { timeoutMs: 4_000, totalMs: 6_000 },

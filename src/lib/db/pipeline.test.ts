@@ -134,6 +134,10 @@ describe('searching', () => {
     }
   });
 
+  it('returns no files for nonsense even when the search model is working', async () => {
+    expect(await retrieve(heuristicPlan('asdkfj qwerty zzz'))).toEqual([]);
+  });
+
   it('says nothing was found when a kind word comes with words that match nothing', async () => {
     const noModel = vi.spyOn(native, 'embedText').mockRejectedValue(new Error('no search model'));
     try {

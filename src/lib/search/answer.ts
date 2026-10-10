@@ -28,10 +28,19 @@ export function templatedAnswer(plan: QueryPlan, results: RetrievedFile[]): stri
 const SYSTEM =
   'You answer questions about files on the user’s phone, on-device. ' +
   'Use only the numbered results below — never invent a file or a fact. ' +
+  'If the question is about the conversation itself (for example the person’s name), answer from the conversation. ' +
   'Answer in 1–3 short sentences, in the same language as the question (Taglish is fine). ' +
   'Point to results with [1], [2].';
 
-export function answerPrompt(query: string, results: RetrievedFile[]): string {
+const CHAT_SYSTEM =
+  'You are AiFoundIt, a friendly assistant that finds files on this phone, entirely on-device. ' +
+  'Chat briefly, in 1–2 short sentences, in the same language as the person (Taglish is fine). ' +
+  'Use the conversation for context. You have not looked at any files for this message, so never mention or invent files; ' +
+  'if the person wants a file, invite them to describe it.';
+
+const conversationBlock = (history: string) => (history ? `Conversation so far:\n${history}\n\n` : '');
+
+export function answerPrompt(query: string, results: RetrievedFile[], history = ''): string {
   const numbered = results
     .slice(0, 5)
     .map((r, i) => {
@@ -40,7 +49,11 @@ export function answerPrompt(query: string, results: RetrievedFile[]): string {
       return `[${i + 1}] ${f.name} — ${f.folder}, ${formatDate(f.savedAt, true)}. ${snippet}`;
     })
     .join('\n');
-  return `${SYSTEM}\n\nResults:\n${numbered}\n\nQuestion: ${query}\nAnswer:`;
+  return `${SYSTEM}\n\n${conversationBlock(history)}Results:\n${numbered}\n\nQuestion: ${query}\nAnswer:`;
+}
+
+export function chatPrompt(query: string, history = ''): string {
+  return `${CHAT_SYSTEM}\n\n${conversationBlock(history)}Person: ${query}\nAssistant:`;
 }
 
 // Streams the grounded answer sentence. Calls onToken with the accumulated
@@ -49,13 +62,26 @@ export function answerPrompt(query: string, results: RetrievedFile[]): string {
 export async function streamAnswer(
   query: string,
   results: RetrievedFile[],
-  opts: { llmAvailable: boolean; onToken?: (text: string) => void } = { llmAvailable: false },
+  opts: { llmAvailable: boolean; history?: string; onToken?: (text: string) => void } = { llmAvailable: false },
 ): Promise<string | null> {
   if (!opts.llmAvailable || results.length === 0) return null;
   const outcome = await generateText(
-    { prompt: answerPrompt(query, results), maxTokens: 140, temperature: 0.3 },
+    { prompt: answerPrompt(query, results, opts.history), maxTokens: 140, temperature: 0.3 },
     // Up to 45 s for the first word (the model reads the results first); after that it is never cut off while it
     // keeps writing.
+    { timeoutMs: 45_000, onToken: opts.onToken },
+  );
+  if (!outcome.ok || !outcome.text.trim()) return null;
+  return outcome.text.trim();
+}
+
+// A short reply for a message that is not about finding a file. Returns null when the model cannot answer.
+export async function streamChat(
+  query: string,
+  opts: { history?: string; onToken?: (text: string) => void } = {},
+): Promise<string | null> {
+  const outcome = await generateText(
+    { prompt: chatPrompt(query, opts.history), maxTokens: 100, temperature: 0.5 },
     { timeoutMs: 45_000, onToken: opts.onToken },
   );
   if (!outcome.ok || !outcome.text.trim()) return null;

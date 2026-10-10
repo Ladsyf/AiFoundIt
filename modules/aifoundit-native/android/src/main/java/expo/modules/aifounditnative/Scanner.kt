@@ -346,11 +346,13 @@ object Scanner {
       val seen = AiState.inbox.seenFingerprints()
       val byPath = listing.candidates.associateBy { it.path }
 
-      // Priority folders first, then the newest files, so recent photos are searchable early.
+      // Priority folders first, then everything but videos (they cost the most to embed), newest first.
       val changed = listing.candidates
         .filter { seen[it.path] != fingerprint(it) }
         .sortedWith(
-          compareBy<Candidate> { ScanRules.priority(it.folder, cfg.includeRoots) }.thenByDescending { it.modifiedAt }
+          compareBy<Candidate> { ScanRules.priority(it.folder, cfg.includeRoots) }
+            .thenBy { it.kind == "video" }
+            .thenByDescending { it.modifiedAt }
         )
 
       AiState.total = changed.size
@@ -544,11 +546,16 @@ object Scanner {
 
     // Video moments: one vector per distinct frame, with its position in the video.
     var previous: FloatArray? = null
+    var previousSignature: IntArray? = null
     for (f in p.frames) {
+      val signature = FrameSignature.of(f.bitmap)
+      val last = previousSignature
+      if (last != null && FrameSignature.meanAbsDiff(last, signature) < FrameSignature.SAME_FRAME) continue
       val v = AiState.embedder.embedImage(f.bitmap) ?: continue
       val prev = previous
       if (prev != null && cosine(prev, v) > VIDEO_DUPLICATE) continue
       previous = v
+      previousSignature = signature
       chunks.add(mapOf("kind" to "frame", "startMs" to f.atMs, "vector" to v.map { it.toDouble() }))
     }
 

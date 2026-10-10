@@ -1,6 +1,8 @@
 package expo.modules.aifounditnative
 
 import android.graphics.BitmapFactory
+import android.os.Build
+import android.provider.MediaStore
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
@@ -36,6 +38,18 @@ class AifounditNativeModule : Module() {
 
     Function("hasAllFilesAccess") {
       Intents.hasAllFilesAccess()
+    }
+
+    Function("mediaGeneration") {
+      try {
+        if (Build.VERSION.SDK_INT >= 30) {
+          MediaStore.getGeneration(ctx(), MediaStore.VOLUME_EXTERNAL_PRIMARY).toDouble()
+        } else {
+          -1.0
+        }
+      } catch (_: Throwable) {
+        -1.0
+      }
     }
 
     AsyncFunction("openAllFilesAccessSettings") {

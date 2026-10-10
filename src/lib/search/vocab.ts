@@ -3,8 +3,24 @@ import type { FileKind } from '@/lib/native/contract';
 export const STOPWORDS = new Set(
   (
     'a an the with my of from for that this in on to i me find show where is was it and some any all file files please can you get me have had one what whats about there here ' +
+    'do does did done are am be been being were has having how why when who whom which would should could will shall might must may if then than so such too very just also not no nor only own same other another each few more most both either as at by into through during before after up down out off over under again once while until we our us your yours he she they them his her their its im ive s t ' +
+    'bang nga naman pala muna si ni kay kina sila kayo tayo kami ninyo nila pwede puwede ' +
     'na ng nang sa ang yung mga ko mo niya namin natin akin aking kaniya siya ako ikaw ito iyan iyon dito diyan doon nasaan saan ano alin ba po opo pa rin din lang lamang kasi para pati pero at o hindi wala meron may mayroon nung noong nitong nito itong yun dun'
   ).split(' '),
+);
+
+export const CHITCHAT_WORDS = new Set(
+  (
+    'hi hello hey heya hiya yo sup hola kumusta kamusta musta good morning afternoon evening umaga hapon gabi thanks thank salamat ok okay help test testing bye goodbye'
+  ).split(' '),
+);
+
+export const DATE_WORDS = new Set(
+  'week weeks today yesterday tomorrow month months year years last this recent recently kahapon ngayon linggo buwan taon'.split(' '),
+);
+
+export const FOLLOW_UP_WORDS = new Set(
+  'only just also and another else more those them these that yung iyon iyan ito pa din rin naman how what about paano dito diyan doon'.split(' '),
 );
 
 export const KIND_WORDS: Record<string, { kinds?: FileKind[]; screenshot?: boolean; category?: string }> = {

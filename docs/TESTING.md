@@ -29,11 +29,25 @@ After the scan finishes, send each of these (or tap the suggestion buttons). Eve
 | `PDF about the thesis defense schedule` | `Thesis_Defense_Schedule.pdf`, snippet shows page text |
 | `my PhilHealth ID` | The PhilHealth screenshot — **sensitive files must appear here** because the query asks for an ID |
 | `wifi password screenshot` | The Casa-5G Wi-Fi screenshot |
-| `asdkfj qwerty zzz` (nonsense) | "I couldn't find a file that matches…" — **no invented results** |
+| `asdkfj qwerty zzz` (nonsense) | "I couldn't find a file that matches…" — **no invented results**, and no file cards at all |
+| `Hi`, `thanks`, `kumusta` | A short greeting that says what to ask for — no search runs and no files are shown |
+| A topic that is not on the phone (for example `dinosaur toy`) | No files. A file found only by meaning must stand clear of how similar the question is to the rest of the index (dev builds log each hit as `similarity/z` after `[search]`; the cut is `Z_MIN` in `src/lib/search/relevance.ts`) |
 | `receipts` (1–3 words) | Receipt category results; the planner is skipped for short queries |
 | `screenshots`, `photos`, `videos` | Pure kind-word queries have no text terms — retrieval falls back to browsing files by kind/date/category filters, most recent first |
 
 For each card: thumbnail (real image in native mode, icon fallback in mock), name, date, folder. Tap a card → file sheet shows the highlighted "Why it matched" snippet, tags, folder path.
+
+### Conversation context
+
+The chat remembers the last few turns of the current conversation (not across conversations or restarts).
+
+| Say | Then | Expected |
+|---|---|---|
+| `My name is Almar` | `What is my name?` | A short chat reply, then "Almar" — no file cards for either |
+| `Jollibee receipt` | `only this week?` | Same topic, narrowed to this week (the earlier topic carries over because the new message has none of its own) |
+| `Jollibee receipt` | `only the PDF` | Same topic, PDFs only |
+| `Jollibee receipt` | `screenshots` | A fresh search for screenshots — a bare kind word does not inherit the old topic |
+| Any search | `which one is the biggest?` | The answer can use the files the last answer showed (their names are in the context) |
 
 ## 3. File actions (sheet)
 
@@ -60,7 +74,9 @@ On a photo, a PDF, and a DOCX, verify each button:
 
 - **Second scan** (Settings → Rescan): completes fast and processes **0 files** — change detection works (path + size + mtime).
 - **New file**: drop a new receipt screenshot into `Pictures/Screenshots` (or take a photo), rescan → it appears in results.
+- **New file while the app is open**: add a photo or PDF (for example into Download) and leave the app open → within about a minute a small "Indexing files on this phone" bar shows for that file, and it is searchable without pressing Rescan. A scan that finds nothing new shows no bar. Deleted files stop appearing the same way.
 - **Delete**: delete a file via the Files app, rescan → its card stops appearing.
+- **Order**: photos, documents and recordings are indexed first and videos last (a video costs up to 12 picture embeddings), so most files are searchable well before the scan ends.
 - **Still indexing**: send a query while the progress bar is up → results show the "Still indexing, so some files may not show up yet" line.
 
 ## 6. Offline proof

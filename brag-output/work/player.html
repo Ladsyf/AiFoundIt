@@ -2,315 +2,476 @@
 <html>
 <head>
 <meta charset="utf-8">
+<title>AiFoundIt pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@500&display=block" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=block" rel="stylesheet">
 <style>
-  html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0d0b09;
-    font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;}
-  *{box-sizing:border-box;position:relative;}
-  #bg,#glow,#vig,#wall,#cap,#stage,#phone,#outro{position:absolute;}
-  #bg{inset:0;background:
-    radial-gradient(1200px 800px at 63% 50%, #241a10 0%, #14100c 55%, #0d0b09 100%);}
-  #vig{inset:0;box-shadow:inset 0 0 240px rgba(0,0,0,.55);}
-  svg{display:block}
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0E0C0A; }
+  * { box-sizing: border-box; }
+  #root, #over { position: absolute; inset: 0; overflow: hidden; }
+  .ms { font-family: 'Material Symbols Outlined'; font-weight: normal; font-style: normal; line-height: 1;
+    letter-spacing: normal; text-transform: none; white-space: nowrap; direction: ltr; display: inline-block;
+    font-feature-settings: 'liga'; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; overflow: hidden; }
+  .ms.fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .hd { font-family: 'Segoe UI Variable Display', 'Segoe UI', sans-serif; }
+  .tx { font-family: 'Segoe UI Variable Text', 'Segoe UI', sans-serif; }
+  .ph { font-family: Roboto, 'Segoe UI', sans-serif; }
+  .mono { font-family: 'Roboto Mono', Consolas, monospace; }
+  .a { position: absolute; }
+  .ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 </head>
 <body>
-<div id="bg"></div>
-<div id="wall" style="inset:0"></div>
-<div id="cap" style="inset:0"></div>
-<div id="stage" style="inset:0"></div>
-<div id="glow"></div>
-<div id="phone" style="inset:0"></div>
-<div id="outro" style="inset:0"></div>
-<div id="vig"></div>
+<img src="../../assets/images/icon.png" alt="" style="position:absolute;left:-9999px;width:160px;height:160px">
+<div id="root"></div>
+<div id="over"></div>
 <script>
-// ---------- palette (from src/constants/theme.ts dark) ----------
-const C={surface:'#151311',low:'#1D1B19',cont:'#221F1D',high:'#2C2927',highest:'#373431',
-  on:'#E9E2DC',onv:'#CFC6BD',pri:'#FFB870',onPri:'#4A2800',priC:'#6A3C00',onPriC:'#FFDCBE',
-  secC:'#4A3A2D',onSecC:'#F1E0D2',olv:'#4A4540'};
-
-const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
-const eo=t=>{t=clamp(t,0,1);return 1-Math.pow(1-t,3)};
-const ei=t=>{t=clamp(t,0,1);return t*t*t};
-const eio=t=>{t=clamp(t,0,1);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};
-const win=(t,a,b,f)=>eo((t-a)/f)*(1-eo((t-b+f)/f));   // 0→1→0
-const seg=(t,a,b)=>clamp((t-a)/(b-a),0,1);
-
-const T={
-  hook:[0,4.6], reveal:[4.6,9.2],
-  find:[9.2,21.6], math:[21.6,31.6], doc:[31.6,41.2], org:[41.2,51.6],
-  out:[51.6,60]
+const C = {
+  pri: '#FFB870', onPri: '#4A2800', priC: '#6A3C00', onPriC: '#FFDCBE', secC: '#4A3A2D', onSecC: '#F1E0D2',
+  surf: '#151311', low: '#1D1B19', cont: '#221F1D', high: '#2C2927', highest: '#373431',
+  on: '#E9E2DC', onv: '#CFC6BD', outline: '#999088', olv: '#4A4540',
+  inv: '#E9E2DC', invOn: '#33302D', invPri: '#8B5000', bg: '#0E0C0A',
 };
 
-// ---------- svg icons ----------
-const I={
-  lock:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2.5" fill="${c}"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="${c}" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`,
-  plane:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${c}"><path d="M21.5 3.5 2.8 10.4c-.6.2-.6 1.1.1 1.3l6 1.8 1.8 6c.2.7 1.1.7 1.3.1l6.9-18.7c.2-.6-.6-1.1-1.4-.4z" transform="rotate(8 12 12)"/></svg>`,
-  batt:(s,c)=>`<svg width="${s}" height="${s*0.55}" viewBox="0 0 26 13"><rect x="0.5" y="0.5" width="22" height="12" rx="3.5" stroke="${c}" fill="none" stroke-width="1.4"/><rect x="3" y="3" width="17" height="7" rx="1.8" fill="${c}"/><rect x="23.8" y="4" width="2" height="5" rx="1" fill="${c}"/></svg>`,
-  menu:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24"><path d="M4 6.5h16M4 12h16M4 17.5h16" stroke="${c}" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`,
-  send:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${c}"><path d="M12 19V6M6 12l6-6 6 6" stroke="${c}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
-  check:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-  chkbox:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="${c}"/><path d="M8 12.4l2.7 2.7L16.4 9" stroke="${C.onPri}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
-  move:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none"><path d="M4 7h9M4 12h9M4 17h7" stroke="${c}" stroke-width="2" stroke-linecap="round"/><path d="M15 10l4 4-4 4" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(1 1)"/></svg>`,
-  edit:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${c}"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1z"/></svg>`,
-  doc:(s,c)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24"><path d="M6 3h8l5 5v12a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 20V4.5A1.5 1.5 0 0 1 6.5 3z" fill="${c}" transform="translate(-0.5 0.5)"/><path d="M14 3v5h5" fill="rgba(255,255,255,.35)"/></svg>`,
-  spin:(s,c,p)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" style="transform:rotate(${p*360}deg)"><circle cx="12" cy="12" r="9" stroke="${C.highest}" stroke-width="2.6" fill="none"/><path d="M21 12a9 9 0 0 0-9-9" stroke="${c}" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>`,
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lin = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (x) => 1 - Math.pow(1 - clamp(x), 3);
+const eio = (x) => { x = clamp(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const back = (x) => { x = clamp(x); const c1 = 1.5, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const inOut = (t, a, b, fi = 0.45, fo = 0.4) => Math.min(eo(lin(t, a, a + fi)), 1 - eio(lin(t, b - fo, b)));
+
+const S = { hook: [0, 5.8], reveal: [5.8, 9.6], f1: [9.6, 19.9], f2: [19.9, 28.1], f3: [28.1, 37.0], f4: [37.0, 47.6], proof: [47.6, 55.0], outro: [55.0, 60.0] };
+
+const ic = (name, size, color, fill) =>
+  `<span class="ms${fill ? ' fill' : ''}" style="font-size:${size}px;width:${size}px;height:${size}px;color:${color}">${name}</span>`;
+
+// ───────────── thumbnails drawn as the screenshots they stand for ─────────────
+const gcashThumb = (head, l1, l2, amount, l3) => `
+  <div class="ph" style="position:absolute;inset:0;background:#F4F6FA;display:flex;flex-direction:column">
+    <div style="background:#0A5BE0;color:#fff;font-size:10.5px;font-weight:700;padding:6px 9px;letter-spacing:.2px">GCash <span style="font-weight:400;opacity:.85;margin-left:4px">${head}</span></div>
+    <div style="padding:8px 10px 0;display:flex;flex-direction:column;gap:3px">
+      <div style="font-size:8.5px;color:#6B7280">${l1}</div>
+      <div style="font-size:9.5px;font-weight:700;color:#1F2937" class="ell">${l2}</div>
+      <div style="font-size:19px;font-weight:700;color:#111827;margin-top:2px">${amount}</div>
+      <div style="font-size:7.5px;color:#9CA3AF;line-height:1.5">${l3}</div>
+    </div>
+  </div>`;
+const jollibeeThumb = () => `
+  <div class="ph" style="position:absolute;inset:0;background:#FFFDF8;display:flex;flex-direction:column">
+    <div style="background:#D9232D;color:#fff;font-size:11px;font-weight:700;padding:5px 9px;display:flex;justify-content:space-between"><span>Jollibee</span><span style="font-weight:500;font-size:8.5px;opacity:.9;padding-top:2px">ORDER #4582</span></div>
+    <div style="padding:7px 10px 0;font-size:8.5px;color:#3F3A34;line-height:1.75">
+      <div style="display:flex;justify-content:space-between"><span>1-pc Chickenjoy w/ Rice</span><span>₱99.00</span></div>
+      <div style="display:flex;justify-content:space-between"><span>Peach Mango Pie</span><span>₱48.00</span></div>
+      <div style="display:flex;justify-content:space-between"><span>Coke Regular</span><span>₱55.00</span></div>
+      <div style="border-top:1px dashed #C9C1B6;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;font-weight:700;font-size:10px;color:#1F1B17"><span>TOTAL</span><span>₱202.00</span></div>
+    </div>
+  </div>`;
+const videoThumb = () => {
+  const candles = [-22, 0, 22].map((dx, i) => `
+    <div class="a" style="left:${83 + dx - 2}px;top:58px;width:4px;height:17px;border-radius:2px;background:${['#F7A8C4', '#9FD3F7', '#FBE38E'][i]}"></div>
+    <div class="a" style="left:${83 + dx - 5}px;top:44px;width:10px;height:15px;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;background:radial-gradient(circle at 50% 70%,#FFF7D6 0%,#FFC24A 55%,rgba(255,140,40,0) 75%);box-shadow:0 0 16px 6px rgba(255,190,90,.35)"></div>`).join('');
+  const bokeh = [[18, 22, 18, .22], [140, 18, 26, .16], [128, 70, 14, .2], [30, 82, 20, .12], [70, 12, 10, .2]]
+    .map(([x, y, s, o]) => `<div class="a" style="left:${x}px;top:${y}px;width:${s}px;height:${s}px;border-radius:50%;background:rgba(255,196,120,${o})"></div>`).join('');
+  return `
+  <div style="position:absolute;inset:0;background:radial-gradient(120px 90px at 50% 60%,#5A3A22 0%,#2A1B12 60%,#160F0B 100%)">
+    ${bokeh}
+    <div class="a" style="left:43px;top:74px;width:80px;height:34px;border-radius:7px 7px 4px 4px;background:linear-gradient(180deg,#FBE9F0 0 30%,#F2B8CB 30% 100%)"></div>
+    <div class="a" style="left:36px;top:104px;width:94px;height:7px;border-radius:4px;background:#E7DCCF"></div>
+    ${candles}
+    <div class="a" style="left:63px;top:42px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;opacity:.0"></div>
+    <div class="a ph" style="right:7px;bottom:7px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:500;letter-spacing:.4px;border-radius:6px;padding:2px 6px;display:flex;align-items:center;gap:2px">${ic('play_arrow', 13, '#fff', true)}0:48</div>
+  </div>`;
 };
 
-// ---------- thumbnails ----------
-const lines=(n,w='70%')=>Array.from({length:n},(_,i)=>`<div style="height:3px;border-radius:2px;background:#b9b2a9;width:${i==n-1?'42%':(i%3==0?'82%':w)};margin:4px 0"></div>`).join('');
-const receipt=(brand,bc,amt,sub)=>`<div style="width:100%;height:100%;background:#efe9e0;border-radius:6px;overflow:hidden;display:flex;flex-direction:column">
-  <div style="background:${bc};color:#fff;font-size:9px;font-weight:700;letter-spacing:.6px;padding:5px 8px">${brand}</div>
-  <div style="flex:1;padding:6px 8px 2px">${lines(3)}</div>
-  <div style="padding:0 8px 7px;font-size:11px;font-weight:700;color:#2c2620">${amt}<span style="font-weight:400;font-size:8px;color:#8d857b;margin-left:6px">${sub}</span></div></div>`;
-const pdf=(title,hi)=>`<div style="width:100%;height:100%;background:#f4efe8;border-radius:6px;padding:10px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px"><div style="background:#B3261E;color:#fff;font-size:7px;font-weight:800;border-radius:3px;padding:2px 5px;letter-spacing:.5px">PDF</div><div style="font-size:8.5px;font-weight:700;color:#4a443c">${title}</div></div>
-  <div style="font-size:8px;color:#7d766b;line-height:1.9">Defense window: <span style="background:rgba(255,184,112,.75);color:#3a2400;border-radius:2px;padding:0 2px">${hi}</span><br>Room 402, Engineering Bldg.<br>Panel: Dr. Reyes, Dr. Uy</div></div>`;
-const docPlain=(tag)=>`<div style="width:100%;height:100%;background:#f4efe8;border-radius:6px;padding:10px;display:flex;flex-direction:column">
-  <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px"><div style="background:#3a5f8a;color:#fff;font-size:7px;font-weight:800;border-radius:3px;padding:2px 5px;letter-spacing:.5px">${tag}</div></div>${lines(4,'88%')}</div>`;
-const photo=(g1,g2,sun)=>`<div style="width:100%;height:100%;border-radius:6px;background:linear-gradient(180deg,${g1},${g2});overflow:hidden">${sun?`<div style="width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,#fff3d6,#ffc46b);margin:14px auto 0;box-shadow:0 0 18px #ffc46b"></div>`:''}</div>`;
-
-// ---------- phone ui builders ----------
-function statusbar(){return `<div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 18px 0 22px;flex:none">
-  <div style="font-size:12.5px;font-weight:600;color:${C.on};letter-spacing:.4px">9:41</div>
-  <div style="display:flex;align-items:center;gap:6px">${I.plane(13,C.onv)}${I.batt(24,C.on)}</div></div>`}
-function appbar(){return `<div style="height:52px;display:flex;align-items:center;gap:14px;padding:0 14px;flex:none">
-  ${I.menu(22,C.onv)}<div style="font-size:18px;font-weight:500;color:${C.on};flex:1">AiFoundIt</div>${I.edit(20,C.pri)}</div>`}
-function composer(typed,caret,sendP){const send=sendP>0;
-  return `<div style="flex:none;padding:10px 14px 16px"><div style="display:flex;align-items:center;gap:10px;background:${C.cont};border-radius:26px;padding:6px 6px 6px 18px;min-height:52px">
-  <div style="flex:1;font-size:15px;color:${typed?C.on:C.onv};line-height:1.35">${typed||'Describe a file'}${caret?`<span style="display:inline-block;width:2px;height:17px;background:${C.pri};vertical-align:-3px;margin-left:1px"></span>`:''}</div>
-  <div style="width:42px;height:42px;border-radius:21px;background:${send?C.pri:C.high};display:flex;align-items:center;justify-content:center;transform:scale(${send?0.9+0.1*sendP:1})">${I.send(18,send?C.onPri:C.onv)}</div></div></div>`}
-function bubble(txt,p){return `<div style="align-self:flex-end;max-width:84%;background:${C.high};color:${C.on};font-size:15px;line-height:1.45;border-radius:20px;border-bottom-right-radius:5px;padding:10px 15px;opacity:${p};transform:translateY(${(1-p)*14}px) scale(${0.92+0.08*p});transform-origin:bottom right">${txt}</div>`}
-function searching(t,p,prog,secs){const files=Math.round(eio(clamp(prog||0,0,1))*3912);
-  const el=(eio(clamp(prog||0,0,1))*(secs||0.4)).toFixed(2);
-  return `<div style="display:flex;align-items:center;gap:10px;opacity:${p};height:34px">${I.spin(16,C.pri,t*4)}<span style="font-size:13.5px;color:${C.onv}">Searching this phone…</span>
-  <span style="flex:1"></span><span style="font-size:12px;color:${C.pri};font-variant-numeric:tabular-nums;letter-spacing:.4px">${files.toLocaleString()} files · ${el} s</span></div>`}
-function fcard(th,name,meta,p,tag){return `<div style="flex:1;background:${C.surface};border:1px solid ${C.olv};border-radius:14px;overflow:hidden;opacity:${p};transform:translateY(${(1-p)*22}px) scale(${0.9+0.1*p})">
-  <div style="height:96px;padding:8px;position:relative">${th}${tag?`<div style="position:absolute;top:4px;left:4px;background:rgba(255,184,112,.92);color:${C.onPri};font-size:8.5px;font-weight:700;letter-spacing:.5px;border-radius:5px;padding:2px 6px;text-transform:uppercase">${tag}</div>`:''}</div>
-  <div style="padding:0 9px 9px"><div style="font-size:12px;font-weight:600;color:${C.on};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
-  <div style="font-size:10.5px;color:${C.onv};margin-top:2px">${meta}</div></div></div>`}
-function cardgrid(cards){const rows=[];for(let i=0;i<cards.length;i+=2)rows.push(cards.slice(i,i+2));
-  return `<div style="display:flex;flex-direction:column;gap:10px">${rows.map(r=>`<div style="display:flex;gap:10px">${r.map(c=>fcard(c.th,c.name,c.meta,c.p,c.tag)).join('')}${r.length==1?'<div style="flex:1"></div>':''}</div>`).join('')}</div>`}
-function answer(txt,p){return `<div style="font-size:15px;line-height:1.5;color:${C.on};opacity:${p};transform:translateY(${(1-p)*10}px)">${txt}</div>`}
-function proof(txt,p){return `<div style="display:flex;align-items:center;gap:6px;opacity:${p}">${I.lock(12,C.onv)}<span style="font-size:11.5px;color:${C.onv};letter-spacing:.2px">${txt}</span></div>`}
-function totalCard(amt,sub,p){return `<div style="background:${C.priC};border-radius:16px;padding:14px 16px;opacity:${p};transform:translateY(${(1-p)*18}px) scale(${0.94+0.06*p})">
-  <div style="font-size:26px;font-weight:500;color:${C.onPriC}">${amt}</div>
-  <div style="font-size:12.5px;color:${C.onPriC};opacity:.9;margin-top:2px">${sub}</div></div>`}
-function miniRow(name,amt,p){return `<div style="display:flex;align-items:center;gap:9px;opacity:${p};transform:translateX(${(1-p)*-12}px)">
-  <div style="width:22px;height:22px;border-radius:6px;background:${C.secC};display:flex;align-items:center;justify-content:center">${I.doc(12,C.onSecC)}</div>
-  <div style="flex:1;font-size:12.5px;color:${C.onv};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
-  <div style="font-size:12.5px;font-weight:600;color:${C.on}">${amt}</div></div>`}
-function planCard(state,p,press){const done=state==='moved';
-  return `<div style="background:${C.low};border:1px solid ${C.olv};border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;opacity:${p};transform:translateY(${(1-p)*20}px)">
-  <div style="display:flex;gap:10px;align-items:flex-start"><span style="margin-top:1px">${I.move(19,C.pri)}</span><div style="flex:1;font-size:14.5px;font-weight:500;color:${C.on};line-height:1.4">Move 6 of 6 files to Receipts?</div></div>
-  <div style="margin-left:29px;display:flex;flex-direction:column;gap:6px">
-    ${['Screenshot_20261009_184522.png','Screenshot_20261008_121007.png','Screenshot_20261007_093311.png','Screenshot_20261005_201144.png'].map(n=>`<div style="display:flex;align-items:center;gap:8px">${I.chkbox(17,C.pri)}<span style="font-size:12.5px;color:${C.onv};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n}</span></div>`).join('')}
-    <div style="font-size:12px;color:${C.onv}">and 2 more</div></div>
-  ${done?`<div style="display:flex;align-items:center;gap:9px">${'<span style="width:20px;height:20px;border-radius:50%;background:'+C.pri+';display:flex;align-items:center;justify-content:center">'+I.check(13,C.onPri)+'</span>'}<span style="font-size:13.5px;color:${C.on}">Moved 6 files to Receipts.</span></div>`
-  :`<div style="font-size:11.5px;color:${C.onv}">Nothing is deleted. You can undo the move.</div>
-    <div style="display:flex;justify-content:flex-end;gap:8px"><div style="padding:9px 14px;font-size:13.5px;font-weight:500;color:${C.pri}">Cancel</div>
-    <div style="padding:9px 18px;font-size:13.5px;font-weight:600;color:${C.onPri};background:${C.pri};border-radius:20px;transform:scale(${press})">Move 6 files</div></div>`}</div>`}
-function snackbar(p){return `<div style="position:absolute;left:14px;right:14px;bottom:78px;background:${C.highest};border-radius:12px;padding:12px 16px;display:flex;align-items:center;opacity:${p};transform:translateY(${(1-p)*14}px)">
-  <span style="flex:1;font-size:13px;color:${C.on}">Moved 6 files to Receipts</span><span style="font-size:13px;font-weight:600;color:${C.pri}">Undo</span></div>`}
-function suggestions(tapIdx,tapP,p){const items=[
-  ['doc','The screenshot with the wifi password'],['rc','Nasaan yung resibo ko sa Jollibee?'],
-  ['doc','The PDF about the thesis defense schedule'],['ph','beach photo'],
-  ['rc','Magkano nagastos ko sa GCash this week?'],['mv','Ilagay mo lahat ng resibo sa isang folder']];
-  const ic={doc:I.doc(15,C.onv),rc:`<span style="width:15px;height:15px;display:inline-block">${I.doc(15,C.onv)}</span>`,ph:`<span style="width:15px;height:15px;border-radius:4px;background:${C.secC};display:inline-block"></span>`,mv:I.move(15,C.onv)};
-  return `<div style="opacity:${p}"><div style="font-size:22px;color:${C.on};margin:14px 0 4px">What are you looking for?</div>
-  <div style="font-size:13.5px;color:${C.onv};margin-bottom:16px">Describe it the way you’d remember it.</div>
-  <div style="display:flex;flex-direction:column;gap:8px">${items.map((s,i)=>`<div style="display:flex;align-items:center;gap:12px;border:1px solid ${i===tapIdx?C.pri:C.olv};border-radius:12px;padding:11px 14px;min-height:48px;background:${i===tapIdx?'rgba(255,184,112,.08)':'transparent'};transform:scale(${i===tapIdx?1-0.04*tapP:1})"><span>${ic[s[0]]}</span><span style="font-size:14px;color:${C.on}">${s[1]}</span></div>`).join('')}</div></div>`}
-function glance(){const t=[['23','Receipts'],['4','IDs'],['31','School'],['88','Screenshots']];
-  return `<div style="margin:12px 0 4px"><div style="font-size:13px;font-weight:500;color:${C.onv};margin-bottom:8px">At a glance</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">${t.map(x=>`<div style="border:1px solid ${C.olv};border-radius:12px;padding:9px 14px"><div style="font-size:15px;font-weight:500;color:${C.on}">${x[0]}</div><div style="font-size:10.5px;color:${C.onv}">${x[1]}</div></div>`).join('')}</div></div>`}
-
-// phone shell: content layers absolutely stacked in chat area
-function phoneHTML(layers,comp,snack){return `
-<div style="width:472px;height:972px;border-radius:46px;background:#000;padding:11px;box-shadow:0 30px 90px rgba(0,0,0,.65),0 0 0 1px #3a332c">
-  <div style="width:450px;height:950px;border-radius:36px;overflow:hidden;background:${C.surface};display:flex;flex-direction:column;position:relative">
-    ${statusbar()}${appbar()}
-    <div style="flex:1;position:relative;overflow:hidden">${layers}</div>
-    ${comp}${snack||''}
-    <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:#000"></div>
-  </div></div>`}
-const layer=(p,inner,dy)=>`<div style="position:absolute;inset:0;padding:8px 16px;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;overflow:hidden;opacity:${p};transform:translateY(${dy||0}px)">${inner}</div>`;
-
-// ---------- typing beat helper ----------
-function typed(query,s,typeStart,cps){const n=Math.floor((s-typeStart)*cps);
-  if(s<typeStart)return['',true];const done=n>=query.length;
-  return[query.slice(0,clamp(n,0,query.length)),!done]}
-
-// ---------- per-beat chat content ----------
-function chatFind(t,s,P){
-  const tapT=1.4,bubT=2.2,srchT=2.7,cardT=4.0,ansT=5.5,prfT=6.2;
-  if(s<bubT)return{html:suggestions(1,eo(seg(s,tapT-0.15,tapT+0.3)),s<tapT+0.5?1:1-eo(seg(s,tapT+0.35,bubT))),comp:['',false,0]};
-  const cards=[
-    {th:receipt('GCash · Pay QR','#0B5FFF','₱345.00','Jollibee – SM Makati'),name:'Screenshot_20261008_121007.png',meta:'Oct 8 · Screenshots',p:eo(seg(s,cardT,cardT+.5)),tag:'semantic match'},
-    {th:receipt('JOLLIBEE','#C8102E','₱202.00','Order #4582'),name:'Screenshot_20260928_115520.png',meta:'Sep 28 · Screenshots',p:eo(seg(s,cardT+.25,cardT+.75)),tag:'semantic match'},
-    {th:receipt('Maya','#00A651','₱189.75','7-Eleven 2291'),name:'Screenshot_20261007_093311.png',meta:'Oct 7 · Screenshots',p:eo(seg(s,cardT+.5,cardT+1))},
-    {th:receipt("McDonald's",'#DA291C','₱292.00','Delivery'),name:'Screenshot_20260920_174030.png',meta:'Sep 20 · Screenshots',p:eo(seg(s,cardT+.75,cardT+1.25))}];
-  return{html:`${bubble('Nasaan yung resibo ko sa Jollibee?',eo(seg(s,bubT,bubT+.35)))}
-    ${s<cardT+0.3?searching(s,win(s,srchT,cardT+0.3,.25),seg(s,srchT,cardT),0.4):''}${cardgrid(cards)}
-    ${answer('2 receipts from Jollibee — the latest is a ₱345.00 GCash payment at SM Makati on Oct 8.',seg(s,ansT,ansT+.6))}
-    ${proof('Found in 0.4 s · on-device · 0 bytes sent',seg(s,prfT,prfT+.5))}`,comp:['',false,1]};
-}
-function chatTyped(t,s,P,cfg){
-  const{q,cps,searchMs,body,ans,prf}=cfg;
-  const ts=0.55,sendT=ts+q.length/cps+0.3,srchT=sendT+0.4,cardT=srchT+searchMs,ansT=cardT+cfg.cardHold,prfT=ansT+0.75;
-  if(s<sendT){const[txt,caret]=typed(q,s,ts,cps);
-    return{html:`<div style="flex:1"></div>`,comp:[txt,caret&&Math.floor(s*3)%2==0,txt?1:0]};
+// ───────────── phone UI pieces (dark theme from src/constants/theme.ts) ─────────────
+const fileCard = (f, p, id) => `
+  <div ${id ? `id="${id}"` : ''} class="ph" style="flex:1;min-width:0;border:1px solid ${C.olv};border-radius:12px;background:${C.surf};padding:8px;display:flex;flex-direction:column;gap:8px;opacity:${p};transform:translateY(${(1 - p) * 14}px) scale(${0.96 + 0.04 * p})">
+    <div ${id ? `id="${id}-th"` : ''} style="height:128px;border-radius:6px;overflow:hidden;position:relative">${f.thumb}</div>
+    <div style="padding:0 4px 4px;display:flex;flex-direction:column;gap:2px">
+      <div class="ell" style="font-size:14px;font-weight:500;line-height:20px;letter-spacing:.1px;color:${C.on}">${f.name}</div>
+      <div class="ell" style="font-size:12px;line-height:16px;letter-spacing:.4px;color:${C.onv}">${f.meta}</div>
+    </div>
+  </div>`;
+const grid = (cards) => {
+  let rows = '';
+  for (let i = 0; i < cards.length; i += 2) {
+    const r = cards.slice(i, i + 2);
+    rows += `<div style="display:flex;gap:12px">${r.join('')}${r.length === 1 ? '<div style="flex:1"></div>' : ''}</div>`;
   }
-  const sendP=s<sendT+0.35?eo(seg(s,sendT,sendT+0.3)):1;
-  return{html:`${bubble(q,eo(seg(s,sendT,sendT+.3)))}
-    ${s<cardT+0.3?searching(s,win(s,srchT,cardT+0.3,.25),seg(s,srchT,cardT),cfg.secs||0.4):''}${body(s,cardT)}
-    ${ans?answer(ans,seg(s,ansT,ansT+.6)):''}${proof(prf||'Found in 0.4 s · on-device · 0 bytes sent',seg(s,prfT,prfT+.5))}`,
-    comp:['',false,1],sendP};
-}
-function bodyMath(s,cardT){
-  const rows=[['Screenshot_20261009_184522.png','₱1,250.00'],['Screenshot_20261008_121007.png','₱345.00'],['Screenshot_20261005_201144.png','₱500.00']];
-  return `<div style="display:flex;flex-direction:column;gap:9px;background:${C.low};border:1px solid ${C.olv};border-radius:16px;padding:13px 15px;opacity:${seg(s,cardT,cardT+.5)};transform:translateY(${(1-seg(s,cardT,cardT+.5))*16}px)">
-    ${rows.map((r,i)=>miniRow(r[0],r[1],seg(s,cardT+0.15+i*0.22,cardT+0.55+i*0.22))).join('')}</div>
-  ${totalCard('₱2,095.00','3 receipts · GCash · summed in code',seg(s,cardT+0.9,cardT+1.5))}`;
-}
-function bodyDoc(s,cardT){
-  const cards=[
-    {th:pdf('Thesis Defense Schedule','thesis defense schedule'),name:'Thesis_Defense_Schedule.pdf',meta:'Sep 10 · Documents/School',p:eo(seg(s,cardT,cardT+.5))},
-    {th:docPlain('PDF'),name:'Enrollment_Form_1stSem.pdf',meta:'Aug 26 · Documents/School',p:eo(seg(s,cardT+.25,cardT+.75))}];
-  return cardgrid(cards);
-}
-function bodyOrg(s,cardT){
-  const pressT=cardT+1.9,doneT=pressT+0.4;
-  const press=s>pressT-0.12&&s<doneT?1-eio(seg(s,pressT-0.12,doneT))*0.12:1;
-  const moved=s>=doneT;
-  return planCard(moved?'moved':'pending',seg(s,cardT,cardT+.6),press);
-}
-const ORG_SNACK_AT=6.55; // scene-local: right after the move lands
+  return `<div style="display:flex;flex-direction:column;gap:12px">${rows}</div>`;
+};
+const bubble = (txt) => `<div style="display:flex;justify-content:flex-end"><div class="ph" style="max-width:82%;background:${C.high};border-radius:20px;border-bottom-right-radius:4px;padding:12px 16px;font-size:16px;line-height:24px;letter-spacing:.25px;color:${C.on}">${txt}</div></div>`;
+const spinner = (t) => `<svg width="20" height="20" viewBox="0 0 24 24" style="transform:rotate(${t * 400}deg)"><circle cx="12" cy="12" r="9" stroke="${C.pri}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-dasharray="${30 + 16 * Math.sin(t * 5)} 100"/></svg>`;
+const searching = (t) => `<div class="ph" style="display:flex;align-items:center;gap:12px;height:28px">${spinner(t)}<span style="font-size:14px;line-height:20px;letter-spacing:.25px;color:${C.onv}">Searching this phone…</span></div>`;
+const words = (txt, t, a, rate) => {
+  const w = txt.split(' ');
+  return w.map((x, i) => `<span style="opacity:${clamp((t - a) * rate - i)}">${x}</span>`).join(' ');
+};
+const answer = (txt, t, a, rate = 26) => `<div class="ph" style="font-size:16px;line-height:24px;letter-spacing:.25px;color:${C.on}">${rate ? words(txt, t, a, rate) : txt}</div>`;
+const totalCard = (id) => `<div id="${id}" class="ph" style="background:${C.priC};border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:2px">
+  <div style="font-size:22px;line-height:28px;color:${C.onPriC}">₱2,095.00</div>
+  <div style="font-size:14px;line-height:20px;letter-spacing:.25px;color:${C.onPriC}">3 receipts · GCash · summed in code</div></div>`;
+const planCard = (state, press) => {
+  const moved = state === 'moved';
+  const rows = ['Screenshot_20261002_090812.png', 'Payslip_September2026.pdf', 'Passport_scan.pdf'].map((n) => `
+    <div style="display:flex;align-items:center;gap:12px;height:32px;opacity:${moved ? 0.6 : 1}">${ic('check_box', 22, moved ? C.onv : C.pri, true)}<span class="ell" style="font-size:14px;line-height:20px;letter-spacing:.25px;color:${C.onv};flex:1">${n}</span></div>`).join('');
+  const foot = moved
+    ? `<div style="display:flex;align-items:center;gap:10px">${ic('check_circle', 20, C.pri, true)}<span style="font-size:14px;line-height:20px;letter-spacing:.25px;color:${C.on}">Moved 4 files to Documents/Private.</span></div>`
+    : `<div style="font-size:12px;line-height:16px;letter-spacing:.4px;color:${C.onv}">Nothing is deleted. You can undo the move.</div>
+       <div style="display:flex;justify-content:flex-end;gap:8px">
+         <div style="height:40px;padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:500;letter-spacing:.1px;color:${C.pri}">Cancel</div>
+         <div id="movebtn" style="height:40px;padding:0 24px;border-radius:20px;background:${C.pri};display:flex;align-items:center;font-size:14px;font-weight:500;letter-spacing:.1px;color:${C.onPri};transform:scale(${1 - 0.06 * press});filter:brightness(${1 - 0.12 * press})">Move 4 files</div>
+       </div>`;
+  return `<div id="plan" class="ph" style="border:1px solid ${C.olv};border-radius:16px;background:${C.low};padding:16px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;gap:12px;align-items:flex-start">${ic('drive_file_move', 22, C.pri)}<div style="flex:1;font-size:16px;line-height:24px;font-weight:500;letter-spacing:.15px;color:${C.on}">Move 4 of 4 files to Documents/Private?</div></div>
+    <div style="display:flex;flex-direction:column;gap:2px">${rows}<div style="font-size:14px;line-height:20px;color:${C.onv};padding:4px 0 0 34px">and 1 more</div></div>
+    ${foot}</div>`;
+};
+const SUGGESTIONS = [
+  ['screenshot', 'The screenshot with the wifi password'],
+  ['receipt_long', 'Nasaan yung resibo ko sa Jollibee?'],
+  ['description', 'The PDF about the thesis defense schedule'],
+  ['photo', 'beach photo'],
+  ['receipt_long', 'Magkano nagastos ko sa GCash this week?'],
+  ['drive_file_move', 'Ilagay mo lahat ng resibo sa isang folder'],
+];
+const welcome = (tap) => `<div class="ph" style="position:absolute;left:0;right:0;bottom:0;padding:0 16px 12px;display:flex;flex-direction:column">
+  <div style="font-size:24px;line-height:32px;color:${C.on}">What are you looking for?</div>
+  <div style="font-size:14px;line-height:20px;letter-spacing:.25px;color:${C.onv};margin:4px 0 20px">Describe it the way you’d remember it.</div>
+  <div style="display:flex;flex-direction:column;gap:8px">${SUGGESTIONS.map(([i, s], k) => `
+    <div ${k === 1 ? 'id="sug"' : ''} style="display:flex;align-items:center;gap:16px;min-height:52px;padding:12px 16px;border:1px solid ${k === 1 && tap > 0 ? C.pri : C.olv};border-radius:12px;background:${k === 1 ? `rgba(255,184,112,${0.1 * tap})` : 'transparent'}">${ic(i, 20, C.onv)}<span style="font-size:16px;line-height:24px;letter-spacing:.25px;color:${C.on}">${s}</span></div>`).join('')}</div></div>`;
+const composer = (st) => `<div class="ph" style="flex:none;padding:8px 12px 10px;display:flex;align-items:flex-end;gap:8px">
+  <div style="flex:1;min-height:56px;border-radius:28px;background:${C.high};padding:16px 20px;font-size:16px;line-height:24px;letter-spacing:.25px;color:${st.text ? C.on : C.onv}">${st.text || 'Describe a file'}${st.caret ? `<span style="display:inline-block;width:2px;height:20px;background:${C.pri};vertical-align:-4px;margin-left:1px"></span>` : ''}</div>
+  <div id="send" style="flex:none;width:48px;height:48px;margin-bottom:4px;border-radius:24px;background:${st.canSend ? C.pri : 'rgba(233,226,220,.12)'};display:flex;align-items:center;justify-content:center;transform:scale(${1 - 0.08 * st.press})">${ic('arrow_upward', 24, st.canSend ? C.onPri : 'rgba(233,226,220,.38)')}</div></div>`;
+const statusBar = (hl) => `<div class="ph" style="flex:none;height:40px;display:flex;align-items:center;justify-content:space-between;padding:4px 26px 0 28px">
+  <span style="font-size:14px;font-weight:500;color:${C.on};letter-spacing:.2px">9:41</span>
+  <span style="display:flex;align-items:center;gap:6px"><span id="plane" style="display:flex;border-radius:10px;padding:2px;box-shadow:0 0 0 ${2 * hl}px rgba(255,184,112,${hl}), 0 0 ${18 * hl}px rgba(255,184,112,${0.6 * hl})">${ic('flight', 17, hl > 0 ? C.pri : C.on, true)}</span>
+  <svg width="25" height="12" viewBox="0 0 25 12"><rect x=".6" y=".6" width="21" height="10.8" rx="3.2" fill="none" stroke="${C.on}" stroke-opacity=".6" stroke-width="1.2"/><rect x="2.4" y="2.4" width="15.5" height="7.2" rx="1.8" fill="${C.on}"/><rect x="22.6" y="3.8" width="1.8" height="4.4" rx=".9" fill="${C.on}" fill-opacity=".6"/></svg></span></div>`;
+const appBar = () => `<div class="ph" style="flex:none;height:64px;display:flex;align-items:center;padding:0 8px">
+  <div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center">${ic('menu', 24, C.on)}</div>
+  <div style="flex:1;font-size:22px;line-height:28px;color:${C.on};margin-left:4px">AiFoundIt</div>
+  <div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center">${ic('edit_square', 24, C.on)}</div></div>`;
+const snackbar = (p) => `<div id="snack" class="ph" style="position:absolute;left:12px;right:12px;bottom:98px;min-height:48px;border-radius:8px;background:${C.inv};display:flex;align-items:center;padding:0 8px 0 16px;box-shadow:0 6px 18px rgba(0,0,0,.35);opacity:${p};transform:translateY(${(1 - p) * 18}px)">
+  <span style="flex:1;font-size:14px;line-height:20px;letter-spacing:.25px;color:${C.invOn}">Moved 4 files to Documents/Private</span>
+  <span id="undo" style="height:40px;padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:500;letter-spacing:.1px;color:${C.invPri}">Undo</span></div>`;
 
-// ---------- embedding-space visual (find beat) ----------
-const EMB_DOTS=[];
-for(let i=0;i<110;i++){const cl=i%5;
-  EMB_DOTS.push({x:[20,48,76,30,62][cl]+(((i*37)%17)-8)*1.1,y:[62,30,44,74,55][cl]+(((i*53)%17)-8)*1.05,hot:cl===1});}
-function embedViz(t){const s=t-T.find[0];const p=win(s,2.7,5.3,0.4);if(p<=0)return'';
-  const act=eio(seg(s,3.0,3.9));
-  let dots='';
-  for(const d of EMB_DOTS){
-    const op=d.hot?0.28+0.72*act:0.45-0.28*act;
-    const sz=d.hot?4.5+3*act:4;
-    dots+=`<div style="position:absolute;left:${d.x}%;top:${d.y}%;width:${sz}px;height:${sz}px;border-radius:50%;background:${d.hot?C.pri:'#6a6157'};opacity:${op};${d.hot?`box-shadow:0 0 ${10*act}px ${C.pri}`:''}"></div>`;
-  }
-  const q=eio(seg(s,2.85,3.6));
-  const qx=48-30*(1-q),qy=30+34*(1-q);
-  return `<div style="position:absolute;left:120px;top:66%;width:520px;height:190px;opacity:${p}">
-    <div style="position:absolute;inset:0">${dots}
-      <div style="position:absolute;left:${qx}%;top:${qy}%;width:26px;height:26px;border:2px solid ${C.pri};border-radius:50%;opacity:${seg(s,2.85,3.3)};transform:translate(-50%,-50%) scale(${1.7-0.7*q})"></div></div>
-    <div style="position:absolute;bottom:-30px;left:0;font-size:15px;color:${C.onv};letter-spacing:.3px">vector search — every file embedded, found by <span style="color:${C.pri}">meaning</span></div></div>`}
+// ───────────── conversation timeline ─────────────
+const G = (p, html, top = 12) => p <= 0.001 ? '' :
+  `<div class="g" data-p="${p}" style="overflow:hidden;flex:none"><div style="padding-top:${top}px;opacity:${clamp(p * 1.3)};transform:translateY(${(1 - p) * 10}px)">${html}</div></div>`;
+const grow = (t, a, d = 0.35) => eo(lin(t, a, a + d));
+const blip = (t, a, b) => Math.min(eo(lin(t, a, a + 0.25)), 1 - eio(lin(t, b - 0.12, b + 0.12)));
 
-// ---------- captions ----------
-const captions={
-  find:['Ask the way you’d remember it.','English or Taglish — it understands both.'],
-  math:['Receipt math, summed in code.','The AI never guesses a number.'],
-  doc:['It reads what’s inside.','Pages, words and photos — not just filenames.'],
-  org:['It organizes, too.','You approve every move. Undo stays.']};
-function capHTML(key,t){const[a,b]=T[key];const s=t-a;
-  const p=win(s,0.2,b-a-0.4,0.5);if(p<=0)return'';
-  const[c1,c2]=captions[key];
-  const p2=seg(s,1.6,2.3);
-  return `<div style="position:absolute;left:120px;top:50%;transform:translateY(-58%) translateX(${(1-p)*30}px);width:600px;opacity:${p}">
-  <div style="font-size:52px;font-weight:600;color:${C.on};line-height:1.15;letter-spacing:-.5px">${c1}</div>
-  <div style="font-size:23px;color:${C.pri};margin-top:18px;opacity:${p2};transform:translateX(${(1-p2)*20}px)">${c2}</div></div>`}
-
-// ---------- hook ----------
-function hook(t){const[a,b]=T.hook;const s=t-a;const p=win(s,0,b-a,.4);if(p<=0)return'';
-  const names=['Screenshot_20261009_184522.png','Meralco_Bill_Oct2026.pdf','IMG_20260920_beach.jpg','GCash ₱1,250 receipt','Payslip_September2026.pdf','IMG_20261001_dog.jpg','Voice_memo_grocery.m4a','Lease_agreement_2026.pdf','Screenshot_20260920_174030.png','Thesis_Defense_Schedule.pdf','VID_20260815_candles.mp4','PLDT_Bill_Oct2026.pdf','IMG_20260815_birthday.jpg','UMID_photo.jpg','Screenshot_meme.jpg','Gcash_Statement_Sept2026.pdf','Calculus_notes.txt','Passport_scan.pdf','Screenshot_20260314_201145.png','IMG_20261005_ramen.jpg'];
-  const ITEM=56;
-  const col=(x,off)=>`<div style="position:absolute;top:-60px;left:${x}px;width:520px;display:flex;flex-direction:column;gap:12px;transform:translateY(${-((s*430+off)%(names.length*ITEM))}px)">
-    ${names.concat(names,names).map(n=>`<div style="display:flex;align-items:center;gap:11px;border:1px solid ${C.olv};border-radius:10px;height:44px;padding:0 14px;background:rgba(29,27,25,.7)">${I.doc(14,'#6a6157')}<span style="font-size:15px;color:#8f877d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n}</span></div>`).join('')}</div>`;
-  const c1=seg(s,0.35,1.0),c2=seg(s,1.9,2.5);
-  return `<div style="position:absolute;inset:0;opacity:${p}">
-    <div style="position:absolute;inset:0;opacity:.5;filter:blur(1.5px)">${col(150,0)}${col(1240,300)}</div>
-    <div style="position:absolute;inset:0;background:radial-gradient(900px 560px at 50% 50%, rgba(13,11,9,.86), rgba(13,11,9,.45) 70%, rgba(13,11,9,.15))"></div>
-    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div style="font-size:66px;font-weight:650;color:${C.on};letter-spacing:-1px;opacity:${c1};transform:translateY(${(1-c1)*26}px)">3,912 files on this phone.</div>
-      <div style="font-size:30px;color:${C.pri};margin-top:22px;opacity:${c2};transform:translateY(${(1-c2)*22}px)">One of them is a receipt from Jollibee.</div>
-    </div></div>`}
-
-// ---------- reveal ----------
-function reveal(t){const[a,b]=T.reveal;const s=t-a;const p=win(s,0,b-a,.5);if(p<=0)return'';
-  const b1=seg(s,.2,.8),b2=seg(s,.7,1.3),b3=seg(s,1.3,1.9),b4=seg(s,2.1,2.7);
-  return `<div style="position:absolute;inset:0;opacity:${p};display:flex;flex-direction:column;align-items:center;justify-content:center">
-    <div style="width:104px;height:104px;border-radius:28px;overflow:hidden;opacity:${b1};transform:scale(${0.7+0.3*b1});box-shadow:0 12px 40px rgba(0,0,0,.5)"><img src="../../assets/images/icon.png" style="width:104px;height:104px;display:block"></div>
-    <div style="font-size:76px;font-weight:650;color:${C.on};letter-spacing:-1.5px;margin-top:30px;opacity:${b2};transform:translateY(${(1-b2)*24}px)">AiFoundIt</div>
-    <div style="font-size:31px;color:${C.on};opacity:${b3};margin-top:16px;transform:translateY(${(1-b3)*18}px)">Find any file by describing it.</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:34px;opacity:${b4}"><span style="opacity:.9">${I.plane(19,C.pri)}</span><span style="font-size:19px;color:${C.onv}">Nothing is uploaded. It works in airplane mode.</span></div></div>`}
-
-// ---------- outro ----------
-function outro(t){const[a,b]=T.out;const s=t-a;const p=eo(seg(s,0,.6));if(p<=0)return'';
-  const b1=seg(s,.4,1.0),b2=seg(s,1.4,2.0),b3=seg(s,5.6,6.2);
-  const chips=['on-device','0 bytes sent','English · Taglish'];
-  return `<div style="position:absolute;inset:0;opacity:${p};display:flex;flex-direction:column;align-items:center;justify-content:center">
-    <div style="position:absolute;inset:0;background:radial-gradient(1000px 640px at 50% 52%, rgba(13,11,9,.9), rgba(13,11,9,.6) 70%, rgba(13,11,9,.2))"></div>
-    <div style="font-size:56px;font-weight:620;color:${C.on};letter-spacing:-1px;opacity:${b1};transform:translateY(${(1-b1)*24}px)">Your files never leave this phone.</div>
-    <div style="display:flex;gap:14px;margin-top:34px;opacity:${b2}">${chips.map((c,i)=>`<div style="border:1px solid ${C.olv};border-radius:22px;padding:9px 20px;font-size:19px;color:${C.pri};background:rgba(255,184,112,.06);opacity:${seg(s,1.5+i*0.3,2.0+i*0.3)};transform:translateY(${(1-seg(s,1.5+i*0.3,2.0+i*0.3))*14}px)">${c}</div>`).join('')}</div>
-    <div style="margin-top:52px;display:flex;align-items:center;gap:18px;opacity:${b3};transform:translateY(${(1-b3)*18}px)">
-      <img src="../../assets/images/icon.png" style="width:58px;height:58px;border-radius:16px;display:block">
-      <div><div style="font-size:34px;font-weight:650;color:${C.on};line-height:1.1">AiFoundIt</div>
-      <div style="font-size:15px;color:${C.onv};margin-top:6px;letter-spacing:2.5px;text-transform:uppercase">AppBuildersPH 2026 · Local AI</div></div></div></div>`}
-
-// ---------- master render ----------
-function render(t){
-  // background glow drifts toward phone
-  const gx=63+Math.sin(t*0.25)*1.2;
-  document.getElementById('bg').style.background=
-    `radial-gradient(1200px 800px at ${gx}% ${50+Math.sin(t*0.18)*2}%, #241a10 0%, #14100c 55%, #0d0b09 100%)`;
-
-  // hook
-  const hv=document.getElementById('wall');
-  hv.innerHTML=hook(t);
-
-  // stage = reveal (centered typography)
-  const st=document.getElementById('stage');
-  st.innerHTML=reveal(t)+outro(t);
-
-  // left captions
-  let cap='';
-  for(const k of ['find','math','doc','org'])cap+=capHTML(k,t);
-  cap+=embedViz(t);
-  document.getElementById('cap').innerHTML=cap;
-
-  // phone: visible during demo beats (+ slightly into outro)
-  const ph=document.getElementById('phone');
-  const phIn=eo(seg(t,T.find[0]-0.15,T.find[0]+0.7));
-  const phOut=1-eo(seg(t,T.out[0]+0.4,T.out[0]+1.6));
-  const phP=phIn*phOut;
-  if(phP<=0){ph.innerHTML='';}
-  else{
-    const bobY=Math.sin(t*0.7)*4, tilt=Math.sin(t*0.5)*0.4;
-    const drift=t<T.find[0]+0.7?(1-phIn)*60:0;
-    // chat layers
-    let layers='',comp=['',false,0],snack='';
-    const beats=[['find',chatFind]];
-    // find
-    let s=t-T.find[0],P=win(s,0.05,T.find[1]-T.find[0]-0.05,0.45);
-    if(P>0){const r=chatFind(t,s,P);layers+=layer(P,r.html,(1-P)*26);if(P>0.5)comp=r.comp;}
-    // math
-    s=t-T.math[0];P=win(s,0.05,T.math[1]-T.math[0]-0.05,0.45);
-    if(P>0){const r=chatTyped(t,s,P,{q:'Magkano nagastos ko sa GCash this week?',cps:23,searchMs:0.95,cardHold:1.8,secs:0.5,body:bodyMath,ans:'You spent ₱2,095.00 on GCash this week across 3 receipts.',prf:'Found in 0.5 s · on-device · 0 bytes sent'});layers+=layer(P,r.html,(1-P)*26);if(P>0.5)comp=r.comp;}
-    // doc
-    s=t-T.doc[0];P=win(s,0.05,T.doc[1]-T.doc[0]-0.05,0.45);
-    if(P>0){const r=chatTyped(t,s,P,{q:'The PDF about the thesis defense schedule',cps:23,searchMs:0.95,cardHold:1.5,body:bodyDoc,ans:'Thesis_Defense_Schedule.pdf — defense window October 17–24, Room 402.',prf:'Found in 0.4 s · on-device · 0 bytes sent'});layers+=layer(P,r.html,(1-P)*26);if(P>0.5)comp=r.comp;}
-    // org
-    s=t-T.org[0];P=win(s,0.05,T.org[1]-T.org[0]-0.05,0.45);
-    if(P>0){const r=chatTyped(t,s,P,{q:'Ilagay mo lahat ng resibo sa isang folder',cps:23,searchMs:0.95,cardHold:2.7,body:bodyOrg,ans:null,prf:'Done · on-device · 0 bytes sent'});
-      layers+=layer(P,r.html,(1-P)*26);if(P>0.5)comp=r.comp;
-      const snP=seg(s,ORG_SNACK_AT,ORG_SNACK_AT+0.45);
-      if(snP>0&&P>0.5)snack=snackbar(Math.min(snP,P));
+const TYPED = [
+  { text: 'Yung video na nag-blow ng candles si baby', start: 20.35, cps: 25, send: 22.2 },
+  { text: 'Magkano nagastos ko sa GCash this week?', start: 28.55, cps: 25, send: 30.3 },
+  { text: 'May picture ba ako ng ID ko?', start: 37.45, cps: 23, send: 38.85 },
+];
+const press = (t, at) => Math.sin(Math.PI * lin(t, at - 0.08, at + 0.2));
+function composerState(t) {
+  for (const q of TYPED) {
+    if (t >= q.start && t < q.send + 0.06) {
+      const n = Math.min(q.text.length, Math.floor((t - q.start) * q.cps));
+      return { text: q.text.slice(0, n), caret: n < q.text.length || Math.floor(t * 2.4) % 2 === 0, canSend: n > 0, press: press(t, q.send) };
     }
-    ph.innerHTML=`<div style="position:absolute;left:1070px;top:50%;transform:translateY(calc(-50% + ${bobY+drift}px)) rotate(${tilt}deg);opacity:${phP}">${phoneHTML(layers,composer(comp[0],comp[1],comp[2]||0),snack)}</div>`;
   }
-  // soften phone behind outro
-  if(t>T.out[0])ph.style.filter=`brightness(${1-0.55*eo(seg(t,T.out[0]+0.4,T.out[0]+1.4))}) blur(${2*eo(seg(t,T.out[0]+0.4,T.out[0]+1.4))}px)`;
-  else ph.style.filter='';
+  return { text: '', caret: false, canSend: false, press: 0 };
 }
-window.render=render;
+
+const A1 = 'Found 2 Jollibee receipts. The latest is your ₱345.00 GCash payment at Jollibee SM Makati on Oct 8 [1].';
+const A2 = 'This looks like the one: a birthday video from Aug 15 with candles [1].';
+const A3 = 'You spent ₱2,095.00 on GCash across 3 receipts. Totals are summed in code, not by the model.';
+const A4 = 'Found 4 files that look like IDs or credentials. I can move them to Documents/Private.';
+
+const T1 = { send: 11.4, res: 12.85, ans: 13.45 };
+const T2 = { send: 22.2, res: 23.55, ans: 24.05 };
+const T3 = { send: 30.3, res: 31.45, ans: 32.55 };
+const T4 = { send: 38.85, res: 39.95, ans: 40.45, move: 43.05 };
+
+function chat(t) {
+  let h = '';
+  if (t >= T1.send) {
+    h += G(grow(t, T1.send), bubble('Nasaan yung resibo ko sa Jollibee?'), 8);
+    h += G(blip(t, T1.send + 0.25, T1.res), searching(t));
+    h += G(grow(t, T1.res, 0.4), grid([
+      fileCard({ name: 'Screenshot_20261008_121007.png', meta: 'Oct 8 · Screenshots', thumb: gcashThumb('Pay QR', 'Paid to', 'JOLLIBEE - SM MAKATI', '₱345.00', 'Ref. No. 8821 004 117233<br>Oct 8, 2026 12:10 PM') }, eo(lin(t, T1.res, T1.res + 0.45)), 'c1a'),
+      fileCard({ name: 'Screenshot_20260928_115520.png', meta: 'Sep 28 · Screenshots', thumb: jollibeeThumb() }, eo(lin(t, T1.res + 0.15, T1.res + 0.6))),
+    ]));
+    h += G(grow(t, T1.ans, 0.3), answer(A1, t, T1.ans));
+  }
+  if (t >= T2.send) {
+    h += G(grow(t, T2.send), bubble(TYPED[0].text), 24);
+    h += G(blip(t, T2.send + 0.25, T2.res), searching(t));
+    h += G(grow(t, T2.res, 0.4), grid([
+      fileCard({ name: 'VID_20260815_candles.mp4', meta: 'Aug 15 · Camera', thumb: videoThumb() }, eo(lin(t, T2.res, T2.res + 0.45)), 'c2a'),
+    ]));
+    h += G(grow(t, T2.ans, 0.3), answer(A2, t, T2.ans));
+  }
+  if (t >= T3.send) {
+    h += G(grow(t, T3.send), bubble(TYPED[1].text), 24);
+    h += G(blip(t, T3.send + 0.25, T3.res), searching(t));
+    h += G(grow(t, T3.res, 0.4), totalCard('total'));
+    h += G(grow(t, T3.res + 0.3, 0.45), grid([
+      fileCard({ name: 'Screenshot_20261009_184522.png', meta: 'Oct 9 · Screenshots', thumb: gcashThumb('Express Send', 'You sent', 'to MARIA SANTOS', '₱1,250.00', 'Ref. No. 4039 812 774211<br>Oct 9, 2026 6:45 PM') }, eo(lin(t, T3.res + 0.3, T3.res + 0.75))),
+      fileCard({ name: 'Screenshot_20261008_121007.png', meta: 'Oct 8 · Screenshots', thumb: gcashThumb('Pay QR', 'Paid to', 'JOLLIBEE - SM MAKATI', '₱345.00', 'Ref. No. 8821 004 117233<br>Oct 8, 2026 12:10 PM') }, eo(lin(t, T3.res + 0.45, T3.res + 0.9))),
+      fileCard({ name: 'Screenshot_20261005_201144.png', meta: 'Oct 5 · Screenshots', thumb: gcashThumb('Send Money', 'You sent', 'to JUAN DELA CRUZ', '₱500.00', 'Ref. No. 5512 889 003417<br>Oct 5, 2026 8:11 PM') }, eo(lin(t, T3.res + 0.6, T3.res + 1.05))),
+    ]));
+    h += G(grow(t, T3.ans, 0.35), answer(A3, t, T3.ans, 0));
+  }
+  if (t >= T4.send) {
+    h += G(grow(t, T4.send), bubble(TYPED[2].text), 24);
+    h += G(blip(t, T4.send + 0.25, T4.res), searching(t));
+    h += G(grow(t, T4.res, 0.45), planCard(t >= T4.move + 0.12 ? 'moved' : 'pending', press(t, T4.move)));
+    h += G(grow(t, T4.ans, 0.35), answer(A4, t, T4.ans, 0));
+    h += G(grow(t, T4.move + 0.25, 0.4), '<div style="height:58px"></div>', 0);
+  }
+  return h;
+}
+
+function phoneScreen(t, hl) {
+  const wP = 1 - eio(lin(t, 11.05, 11.35));
+  const tapP = eo(lin(t, 10.85, 11.05));
+  const snack = t >= T4.move + 0.25 ? snackbar(eo(lin(t, T4.move + 0.25, T4.move + 0.6))) : '';
+  return `<div style="width:412px;height:892px;border-radius:46px;overflow:hidden;background:${C.surf};position:relative;display:flex;flex-direction:column">
+    ${statusBar(hl)}${appBar()}
+    <div style="flex:1;position:relative;overflow:hidden">
+      ${wP > 0 ? `<div style="position:absolute;inset:0;opacity:${wP};transform:translateY(${(1 - wP) * -12}px)">${welcome(tapP)}</div>` : ''}
+      <div id="col" style="position:absolute;left:0;right:0;bottom:0;padding:0 16px 10px;display:flex;flex-direction:column">${chat(t)}</div>
+    </div>
+    ${composer(composerState(t))}
+    <div style="flex:none;height:22px;display:flex;align-items:center;justify-content:center"><div style="width:108px;height:4px;border-radius:2px;background:rgba(233,226,220,.4)"></div></div>
+    ${snack}
+    <div class="a" style="top:14px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#050404;box-shadow:0 0 0 1.5px #1c1917"></div>
+  </div>`;
+}
+
+function phone(t) {
+  const enter = eo(lin(t, S.f1[0], S.f1[0] + 0.9));
+  const exit = eio(lin(t, S.proof[0] - 0.15, S.proof[0] + 0.55));
+  const p = enter * (1 - exit);
+  if (p <= 0) return '';
+  const x = 1400 + (1 - enter) * 140 + exit * 120;
+  const y = 540 + Math.sin(t * 0.55) * 4;
+  return `<div id="phone" class="a" style="left:${x - 216}px;top:${y - 456}px;width:432px;height:912px;opacity:${p};transform:rotate(${Math.sin(t * 0.4) * 0.25}deg) scale(${0.97 + 0.03 * enter})">
+    <div class="a" style="right:-3px;top:180px;width:4px;height:70px;border-radius:2px;background:#2A2521"></div>
+    <div class="a" style="right:-3px;top:280px;width:4px;height:120px;border-radius:2px;background:#2A2521"></div>
+    <div style="position:absolute;inset:0;border-radius:56px;background:linear-gradient(145deg,#2B2622,#0C0A09 40%,#1A1714);padding:10px;box-shadow:0 50px 120px rgba(0,0,0,.65),0 0 0 1px #3B342E,inset 0 0 0 1.5px #403831">
+      ${phoneScreen(t, 0)}
+    </div></div>`;
+}
+
+// ───────────── left-side captions ─────────────
+const FEATURES = {
+  f1: ['01', 'Ask like you talk', 'Ask the way|you’d say it.', 'English or Taglish. It reads the words inside every screenshot.'],
+  f2: ['02', 'Looks inside files', 'It even searches|inside videos.', 'Video frames, PDF pages and photos, matched by meaning, not file name.'],
+  f3: ['03', 'Does the math', 'Spending totals|you can trust.', 'Amounts are read and added in code. The AI never guesses a number.'],
+  f4: ['04', 'Keeps you in control', 'Spots your IDs.|Moves them only|with your OK.', 'You see the plan first. One tap undoes it.'],
+};
+function caption(t, key) {
+  const [a, b] = S[key];
+  const s = t - a;
+  const out = 1 - eio(lin(t, b - 0.5, b - 0.05));
+  if (s < 0 || out <= 0) return '';
+  const [num, label, head, sub] = FEATURES[key];
+  const lp = eo(lin(s, 0.15, 0.6));
+  const lines = head.split('|').map((ln, i) => {
+    const p = eo(lin(s, 0.3 + i * 0.1, 0.85 + i * 0.1));
+    return `<div style="opacity:${p};transform:translateY(${(1 - p) * 34}px)">${ln}</div>`;
+  }).join('');
+  const sp = eo(lin(s, 0.9, 1.45));
+  return `<div class="a" style="left:150px;top:540px;width:660px;transform:translateY(-50%) translateY(${(1 - out) * -18}px);opacity:${out}">
+    <div class="tx" style="display:flex;align-items:center;gap:16px;opacity:${lp};transform:translateX(${(1 - lp) * -16}px)">
+      <span style="font-size:22px;font-weight:700;color:${C.pri};letter-spacing:2px">${num}</span>
+      <span style="width:${44 * lp}px;height:2px;background:${C.pri};opacity:.6"></span>
+      <span style="font-size:20px;font-weight:600;color:${C.onv};letter-spacing:3px;text-transform:uppercase">${label}</span></div>
+    <div class="hd" style="font-size:76px;font-weight:650;line-height:1.06;letter-spacing:-1.6px;color:${C.on};margin-top:26px">${lines}</div>
+    <div class="tx" style="font-size:27px;line-height:1.45;color:${C.onv};margin-top:30px;max-width:600px;opacity:${sp};transform:translateY(${(1 - sp) * 16}px)">${sub}</div>
+  </div>`;
+}
+function progress(t) {
+  const p = Math.min(eo(lin(t, S.f1[0] + 0.3, S.f1[0] + 1)), 1 - eio(lin(t, S.proof[0] - 0.4, S.proof[0])));
+  if (p <= 0) return '';
+  const keys = ['f1', 'f2', 'f3', 'f4'];
+  return `<div class="a tx" style="left:150px;top:948px;display:flex;gap:14px;opacity:${p}">${keys.map((k) => {
+    const [a, b] = S[k];
+    const fill = clamp((t - a) / (b - a));
+    const active = t >= a && t < b;
+    return `<div style="display:flex;flex-direction:column;gap:10px;width:150px;white-space:nowrap">
+      <div style="height:3px;border-radius:2px;background:rgba(233,226,220,.14);overflow:hidden"><div style="height:3px;width:${fill * 100}%;background:${C.pri}"></div></div>
+      <div style="font-size:15px;letter-spacing:1.5px;color:${active ? C.on : 'rgba(207,198,189,.45)'}">${FEATURES[k][0]} ${['ASK', 'INSIDE', 'MATH', 'CONTROL'][keys.indexOf(k)]}</div></div>`;
+  }).join('')}</div>`;
+}
+
+// callouts point at live elements inside the phone
+const CALLOUTS = [
+  { a: 14.6, b: 19.45, target: 'c1a', text: 'Real files from your phone.<br><b>The AI can’t invent one.</b>' },
+  { a: 24.35, b: 27.65, target: 'c2a-th', text: 'Matched from the<br>video’s frames' },
+  { a: 32.2, b: 36.55, target: 'total', text: '₱1,250 + ₱345 + ₱500,<br><b>added in code</b>' },
+  { a: 40.9, b: 42.95, target: 'plan', y: (r) => r.bottom - 36, text: 'Nothing moves<br><b>until you tap</b>' },
+  { a: 43.75, b: 47.2, target: 'snack', text: 'Changed your mind?<br><b>Undo puts it all back</b>' },
+];
+const TOUCHES = [{ id: 'sug', at: 10.95 }, { id: 'send', at: 22.2 }, { id: 'send', at: 30.3 }, { id: 'send', at: 38.85 }, { id: 'movebtn', at: 43.05 }];
+
+function overlay(t) {
+  let h = '';
+  for (const c of CALLOUTS) {
+    const p = inOut(t, c.a, c.b, 0.5, 0.35);
+    if (p <= 0) continue;
+    const el = document.getElementById(c.target);
+    if (!el) continue;
+    const r = el.getBoundingClientRect();
+    const ax = r.left - 3, ay = c.y ? c.y(r) : r.top + r.height / 2;
+    const px = 1135, py = clamp(ay, 140, 950);
+    const lp = eo(lin(t, c.a, c.a + 0.45));
+    const len = Math.max(0, ax - px);
+    h += `<div class="a" style="left:${px}px;top:${py}px;width:${len * lp}px;height:2px;margin-top:-1px;background:linear-gradient(90deg,rgba(255,184,112,.85),rgba(255,184,112,.5));transform-origin:left;transform:rotate(${Math.atan2(ay - py, len) * 180 / Math.PI}deg);opacity:${p}"></div>
+      <div class="a" style="left:${ax - 7}px;top:${ay - 7}px;width:14px;height:14px;border-radius:50%;background:${C.pri};opacity:${p * eo(lin(t, c.a + 0.3, c.a + 0.55))};box-shadow:0 0 0 ${6 + 4 * Math.sin(t * 5)}px rgba(255,184,112,.22),0 0 22px rgba(255,184,112,.6)"></div>
+      <div class="a tx" style="right:${1920 - px + 18}px;top:${py}px;transform:translateY(-50%) translateX(${(1 - p) * -14}px);opacity:${p};text-align:right;font-size:23px;line-height:1.35;color:${C.onPriC};white-space:nowrap">
+        <div style="display:inline-block;padding:14px 20px;border-radius:16px;background:rgba(255,184,112,.10);border:1px solid rgba(255,184,112,.38);backdrop-filter:blur(6px)">${c.text.replace(/<b>/g, `<b style="color:${C.pri};font-weight:650">`)}</div></div>`;
+  }
+  for (const tc of TOUCHES) {
+    const p = lin(t, tc.at - 0.18, tc.at + 0.32);
+    if (p <= 0 || p >= 1) continue;
+    const el = document.getElementById(tc.id);
+    if (!el) continue;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const a = Math.sin(Math.PI * p);
+    const s = 0.7 + 0.5 * p;
+    h += `<div class="a" style="left:${cx - 22}px;top:${cy - 22}px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,${0.28 * a});border:2px solid rgba(255,255,255,${0.55 * a});transform:scale(${s})"></div>`;
+  }
+  return h;
+}
+
+// ───────────── hook: the file-name search that fails ─────────────
+const WALL_NAMES = ['Screenshot_20261009_184522.png', 'IMG_20260920_beach.jpg', 'Thesis_Defense_Schedule.pdf', 'VID_20260815_candles.mp4', 'Screenshot_20261008_121007.png', 'Payslip_September2026.pdf', 'IMG_20261001_dog.jpg', 'Meralco_Bill_Oct2026.pdf', 'Screenshot_20260928_115520.png', 'Voice_memo_grocery.m4a', 'Passport_scan.pdf', 'IMG_20261005_ramen.jpg', 'Screenshot_20261007_093311.png', 'Lease_agreement_2026.pdf', 'Screenshot_20261005_201144.png', 'IMG_20260815_birthday.jpg', 'Internship_Report.docx', 'Screenshot_20260920_174030.png', 'PLDT_Bill_Oct2026.pdf', 'IMG_20260911_cat.jpg', 'Calculus_notes.txt', 'Screenshot_20261002_090812.png', 'IMG_20260702_graduation.jpg', 'Gcash_Statement_Sept2026.pdf', 'Screenshot_20260314_201145.png'];
+const TINTS = ['#0A5BE0', '#D9232D', '#0F9D58', '#7A4BD0', '#E37400', '#00897B'];
+function wallTile(i) {
+  const n = WALL_NAMES[(i * 7) % WALL_NAMES.length];
+  const kind = n.startsWith('Screenshot') ? 'shot' : n.startsWith('IMG') ? 'img' : n.startsWith('VID') ? 'vid' : 'doc';
+  let th;
+  if (kind === 'shot') th = `<div style="position:absolute;inset:0;background:#F2F2F0"><div style="height:24px;background:${TINTS[i % TINTS.length]}"></div><div style="padding:12px 14px">${[78, 52, 64, 40].map((w) => `<div style="height:7px;width:${w}%;background:#D0CCC6;border-radius:4px;margin-bottom:9px"></div>`).join('')}</div></div>`;
+  else if (kind === 'img') th = `<div style="position:absolute;inset:0;background:linear-gradient(${(i * 47) % 360}deg,hsl(${(i * 53) % 360},35%,42%),hsl(${(i * 53 + 40) % 360},45%,22%))"></div>`;
+  else if (kind === 'vid') th = `<div style="position:absolute;inset:0;background:#2A2018;display:flex;align-items:center;justify-content:center">${ic('play_circle', 44, 'rgba(255,255,255,.75)')}</div>`;
+  else th = `<div style="position:absolute;inset:0;background:#F6F1EA;padding:14px"><div style="display:inline-block;background:#B3261E;color:#fff;font:700 10px Roboto;padding:2px 6px;border-radius:3px;margin-bottom:10px">${n.split('.').pop().toUpperCase()}</div>${[90, 80, 86, 60].map((w) => `<div style="height:6px;width:${w}%;background:#D3CBC0;border-radius:3px;margin-bottom:8px"></div>`).join('')}</div>`;
+  return `<div style="width:188px;flex:none"><div style="height:150px;border-radius:12px;overflow:hidden;position:relative">${th}</div>
+    <div class="ph ell" style="font-size:13px;color:#9A9188;margin-top:8px">${n}</div></div>`;
+}
+function hook(t) {
+  const [a, b] = S.hook;
+  const out = 1 - eio(lin(t, b - 0.5, b));
+  if (t > b) return '';
+  const h1 = eo(lin(t, 0.15, 0.7)), h2 = eo(lin(t, 0.32, 0.87));
+  const box = eo(lin(t, 1.25, 1.75));
+  const q = 'gcash receipt';
+  const n = Math.min(q.length, Math.max(0, Math.floor((t - 1.75) * 14)));
+  const caret = t < 2.95 && (n < q.length || Math.floor(t * 2.4) % 2 === 0);
+  const nr = eo(lin(t, 3.0, 3.4)), why = eo(lin(t, 3.3, 3.75));
+  const searchingP = t > 2.7 && t < 3.05 ? 1 : 0;
+  const cols = Array.from({ length: 10 }, (_, c) => {
+    const speed = c % 2 ? 34 : 24;
+    return `<div style="transform:translateY(${-60 - t * speed - (c % 3) * 70}px)">${WALL_TILES[c]}</div>`;
+  }).join('');
+  return `<div class="a" style="inset:0;opacity:${out}">
+    <div class="a" style="left:-40px;top:0;display:flex;gap:26px;opacity:${0.3 * eo(lin(t, 0, 0.6))};filter:blur(1.4px) saturate(.75);transform:scale(${1.06 - 0.03 * eo(lin(t, 0, 5.8))})">${cols}</div>
+    <div class="a" style="inset:0;background:radial-gradient(1100px 640px at 50% 52%,rgba(14,12,10,.93) 0%,rgba(14,12,10,.78) 55%,rgba(14,12,10,.35) 100%)"></div>
+    <div class="a hd" style="left:0;right:0;top:250px;text-align:center;font-size:88px;font-weight:650;letter-spacing:-2px;line-height:1.08;color:${C.on}">
+      <div style="opacity:${h1};transform:translateY(${(1 - h1) * 34}px)">Ever scrolled 5 minutes</div>
+      <div style="opacity:${h2};transform:translateY(${(1 - h2) * 34}px)">for one <span style="color:${C.pri}">GCash receipt?</span></div></div>
+    <div class="a" style="left:560px;top:560px;width:800px;opacity:${box};transform:translateY(${(1 - box) * 24}px)">
+      <div class="ph" style="height:84px;border-radius:42px;background:#1E1B19;border:1px solid #3A3430;display:flex;align-items:center;gap:20px;padding:0 32px;box-shadow:0 20px 60px rgba(0,0,0,.45)">
+        ${ic('search', 34, C.onv)}
+        <span style="font-size:32px;color:${C.on};letter-spacing:.2px">${q.slice(0, n)}${caret ? `<span style="display:inline-block;width:3px;height:36px;background:${C.onv};vertical-align:-6px;margin-left:2px"></span>` : ''}</span>
+        <span style="flex:1"></span>
+        <span style="opacity:${searchingP}">${spinner(t)}</span>
+        <span class="tx" style="font-size:19px;color:#8A8178;letter-spacing:1px">FILE SEARCH</span>
+      </div>
+      <div style="margin-top:34px;text-align:center">
+        <div class="tx" style="display:flex;align-items:center;justify-content:center;gap:14px;font-size:36px;font-weight:600;color:${C.on};opacity:${nr};transform:translateY(${(1 - nr) * 14}px)">${ic('search_off', 38, '#E8897E')}No results</div>
+        <div class="tx" style="font-size:27px;color:${C.onv};margin-top:14px;opacity:${why};transform:translateY(${(1 - why) * 12}px)">It’s saved as <span class="mono" style="color:${C.pri};font-size:25px">Screenshot_20261009_184522.png</span></div>
+      </div></div></div>`;
+}
+const WALL_TILES = Array.from({ length: 10 }, (_, c) => {
+  let tiles = '';
+  for (let r = 0; r < 7; r++) tiles += wallTile(c * 7 + r);
+  return `<div style="display:flex;flex-direction:column;gap:26px">${tiles}</div>`;
+});
+
+// ───────────── reveal, proof, outro ─────────────
+function reveal(t) {
+  const [a, b] = S.reveal;
+  if (t < a - 0.1 || t > b) return '';
+  const out = 1 - eio(lin(t, b - 0.45, b - 0.05));
+  const ip = back(lin(t, a + 0.1, a + 0.75)), io = eo(lin(t, a + 0.1, a + 0.5));
+  const wp = eo(lin(t, a + 0.35, a + 0.85)), tp = eo(lin(t, a + 0.7, a + 1.2));
+  return `<div class="a" style="inset:0;opacity:${out};transform:translateY(${(1 - out) * -20}px)">
+    <div class="a" style="left:960px;top:400px;width:900px;height:900px;margin:-450px 0 0 -450px;border-radius:50%;background:radial-gradient(circle,rgba(255,184,112,${0.16 * io}) 0%,rgba(255,184,112,0) 62%)"></div>
+    <img src="../../assets/images/icon.png" class="a" style="left:880px;top:300px;width:160px;height:160px;border-radius:38px;opacity:${io};transform:scale(${0.7 + 0.3 * ip});box-shadow:0 24px 70px rgba(0,0,0,.55)">
+    <div class="a hd" style="left:0;right:0;top:500px;text-align:center;font-size:118px;font-weight:700;letter-spacing:-3px;color:${C.on};opacity:${wp};transform:translateY(${(1 - wp) * 26}px)">AiFoundIt</div>
+    <div class="a tx" style="left:0;right:0;top:668px;text-align:center;font-size:40px;color:${C.onv};opacity:${tp};transform:translateY(${(1 - tp) * 18}px)">Ask your phone for any file, in <span style="color:${C.pri}">English or Taglish</span>.</div>
+  </div>`;
+}
+const TILES = [
+  ['flight', 'Works in<br>airplane mode', 'Scan, search and answers run on the phone'],
+  ['cloud_off', 'No uploads.<br>No account.', 'Files, index and chats stay on the phone'],
+  ['memory', 'Gemma 4 +<br>EmbeddingGemma 2', 'On-device AI with SQLite hybrid search'],
+];
+function proofScene(t) {
+  const [a, b] = S.proof;
+  if (t < a + 0.2 || t > b) return '';
+  const out = 1 - eio(lin(t, b - 0.45, b - 0.05));
+  const lp = eo(lin(t, a + 0.35, a + 0.8)), hp = eo(lin(t, a + 0.5, a + 1.05));
+  return `<div class="a" style="inset:0;opacity:${out}">
+    <div class="a tx" style="left:0;right:0;top:206px;text-align:center;font-size:21px;font-weight:600;letter-spacing:4px;color:${C.pri};opacity:${lp}">WHY LOCAL AI</div>
+    <div class="a hd" style="left:0;right:0;top:252px;text-align:center;font-size:86px;font-weight:650;letter-spacing:-2px;color:${C.on};opacity:${hp};transform:translateY(${(1 - hp) * 30}px)">Your files never leave the phone.</div>
+    <div class="a" style="left:0;right:0;top:470px;display:flex;justify-content:center;gap:36px">${TILES.map(([i, h, s], k) => {
+      const p = eo(lin(t, a + 1.35 + k * 0.32, a + 1.9 + k * 0.32));
+      return `<div style="width:440px;min-height:300px;border-radius:28px;background:linear-gradient(180deg,rgba(44,41,39,.9),rgba(29,27,25,.9));border:1px solid ${C.olv};padding:38px 38px 36px;opacity:${p};transform:translateY(${(1 - p) * 40}px)">
+        <div style="width:64px;height:64px;border-radius:20px;background:rgba(255,184,112,.14);display:flex;align-items:center;justify-content:center">${ic(i, 36, C.pri, k === 0)}</div>
+        <div class="hd" style="font-size:36px;font-weight:650;line-height:1.12;letter-spacing:-.6px;color:${C.on};margin-top:26px">${h}</div>
+        <div class="tx" style="font-size:21px;line-height:1.4;color:${C.onv};margin-top:12px">${s}</div></div>`;
+    }).join('')}</div>
+  </div>`;
+}
+function outro(t) {
+  const [a, b] = S.outro;
+  if (t < a - 0.1) return '';
+  const ip = back(lin(t, a + 0.05, a + 0.65)), io = eo(lin(t, a + 0.05, a + 0.45));
+  const wp = eo(lin(t, a + 0.25, a + 0.75)), tp = eo(lin(t, a + 0.55, a + 1.05)), fp = eo(lin(t, a + 1.1, a + 1.6));
+  const fade = 1 - lin(t, b - 0.5, b);
+  return `<div class="a" style="inset:0;opacity:${fade}">
+    <div class="a" style="left:960px;top:470px;width:1100px;height:1100px;margin:-550px 0 0 -550px;border-radius:50%;background:radial-gradient(circle,rgba(255,184,112,${0.14 * io}) 0%,rgba(255,184,112,0) 60%)"></div>
+    <div class="a" style="left:0;right:0;top:262px;display:flex;align-items:center;justify-content:center;gap:40px">
+      <img src="../../assets/images/icon.png" style="width:150px;height:150px;border-radius:36px;opacity:${io};transform:scale(${0.75 + 0.25 * ip});box-shadow:0 24px 70px rgba(0,0,0,.55)">
+      <div class="hd" style="font-size:132px;font-weight:700;letter-spacing:-3.5px;color:${C.on};opacity:${wp};transform:translateX(${(1 - wp) * -20}px)">AiFoundIt</div></div>
+    <div class="a hd" style="left:0;right:0;top:500px;text-align:center;font-size:54px;font-weight:600;letter-spacing:-1px;color:${C.on};opacity:${tp};transform:translateY(${(1 - tp) * 20}px)">Find any file by <span style="color:${C.pri}">describing it.</span></div>
+    <div class="a tx" style="left:0;right:0;top:640px;display:flex;justify-content:center;gap:14px;opacity:${fp};transform:translateY(${(1 - fp) * 14}px)">${['On-device', 'Works offline', 'English + Taglish', 'Android'].map((c) => `<span style="font-size:22px;color:${C.onPriC};padding:10px 22px;border-radius:24px;border:1px solid rgba(255,184,112,.35);background:rgba(255,184,112,.07)">${c}</span>`).join('')}</div>
+    <div class="a tx" style="left:0;right:0;top:820px;text-align:center;opacity:${eo(lin(t, a + 1.5, a + 2.0))}">
+      <div style="font-size:22px;letter-spacing:4px;color:${C.onv}">APPBUILDERSPH HACKATHON 2026 · LOCAL AI</div>
+      <div class="mono" style="font-size:22px;color:${C.pri};margin-top:16px">github.com/Ladsyf/AiFoundIt</div></div>
+  </div>`;
+}
+
+// ───────────── frame ─────────────
+function render(t) {
+  const gx = 50 + Math.sin(t * 0.21) * 6, gy = 46 + Math.cos(t * 0.17) * 5;
+  const phoneSide = Math.min(eo(lin(t, S.f1[0], S.f1[0] + 1.2)), 1 - eio(lin(t, S.proof[0] - 0.3, S.proof[0] + 0.6)));
+  const cx = gx + phoneSide * 18;
+  const bg = `<div class="a" style="inset:0;background:radial-gradient(1300px 900px at ${cx}% ${gy}%,#2A1D12 0%,#16110D 50%,${C.bg} 100%)"></div>`;
+  const vig = `<div class="a" style="inset:0;box-shadow:inset 0 0 260px rgba(0,0,0,.6);pointer-events:none"></div>`;
+  let caps = '';
+  for (const k of ['f1', 'f2', 'f3', 'f4']) caps += caption(t, k);
+  document.getElementById('root').innerHTML = bg + hook(t) + reveal(t) + caps + progress(t) + phone(t) + proofScene(t) + outro(t) + vig;
+  for (const g of document.querySelectorAll('.g')) g.style.height = g.firstElementChild.offsetHeight * Number(g.dataset.p) + 'px';
+  document.getElementById('over').innerHTML = overlay(t);
+}
+window.render = render;
+window.ready = Promise.all([
+  document.fonts.load('24px "Material Symbols Outlined"', 'search'),
+  document.fonts.load('400 16px Roboto'), document.fonts.load('500 16px Roboto'), document.fonts.load('700 16px Roboto'),
+  document.fonts.load('500 16px "Roboto Mono"'),
+]).then(() => document.fonts.ready).then(() => Promise.all([...document.images].map((im) => im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; }))));
 render(0);
 </script>
 </body>

@@ -136,6 +136,8 @@ export type ModelDownloadEvent = {
 export interface AiFoundItNative {
   getModelsDir(): string;
   hasAllFilesAccess(): boolean;
+  // Changes whenever anything in the phone's media database changes; -1 when the phone cannot say.
+  mediaGeneration(): number;
   openAllFilesAccessSettings(): Promise<void>;
   openBatterySettings(): Promise<void>;
   // Saves the settings, loads the embedder, and starts loading the chat model in the background.

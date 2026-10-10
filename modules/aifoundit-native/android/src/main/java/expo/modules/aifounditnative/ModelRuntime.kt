@@ -11,6 +11,7 @@ import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
+import com.google.ai.edge.litertlm.MessageCallback
 import com.google.ai.edge.litertlm.SamplerConfig
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.components.containers.Embedding
@@ -24,17 +25,26 @@ import java.util.concurrent.Executors
 import kotlin.math.min
 import kotlin.math.sqrt
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val TAG = "AiFoundIt"
 private const val DIMS = 256
 private const val VISION_TOKENS = 70
+private const val CANCEL_WAIT_MS = 10_000L
+private const val RETRY_SIDE = 448
+private const val RETRY_PAUSE_MS = 300L
+private const val WARMUP_SIDE = 224
+private const val WARMUP_TRIES = 5
 
 /**
  * GPU contexts are bound to the thread that created them, and the embedder is not documented as
@@ -57,14 +67,17 @@ class EmbedderHolder {
 
   /** Loads the model on the embed thread: GPU first, CPU if the GPU delegate fails. */
   suspend fun init(ctx: Context, newPath: String?, useGpu: Boolean) = withContext(EmbedThread.dispatcher) {
+    if (embedder != null && backend != "none" && newPath == path) return@withContext
     closeNow()
     path = newPath
     if (newPath.isNullOrBlank() || !File(newPath).exists()) return@withContext
     val delegates = if (useGpu) listOf(Delegate.GPU, Delegate.CPU) else listOf(Delegate.CPU)
     for (d in delegates) {
       try {
-        embedder = create(ctx, newPath, d)
+        val created = create(ctx, newPath, d)
+        embedder = created
         backend = if (d == Delegate.GPU) "gpu" else "cpu"
+        warmUp(created)
         Log.i(TAG, "embedder ready on $backend")
         return@withContext
       } catch (t: Throwable) {
@@ -124,14 +137,61 @@ class EmbedderHolder {
     val e = embedder ?: return@withContext null
     val started = System.nanoTime()
     try {
-      e.embedImage(BitmapImageBuilder(bitmap).build()).embeddings().firstOrNull()?.to256()
-    } catch (t: Throwable) {
-      Log.w(TAG, "embedImage failed: ${t.message}")
-      null
+      embedPicture(e, bitmap) ?: retryAfterPause(e, bitmap) ?: retrySmaller(e, bitmap)
     } finally {
       imageNanos += System.nanoTime() - started
       imageCount++
       if (imageCount % 20 == 0) logTiming()
+    }
+  }
+
+  private fun embedPicture(e: UniversalEmbedder, bitmap: Bitmap, quiet: Boolean = false): FloatArray? =
+    try {
+      e.embedImage(BitmapImageBuilder(bitmap).build()).embeddings().firstOrNull()?.to256()
+    } catch (t: Throwable) {
+      if (!quiet) {
+        Log.w(TAG, "embedImage failed (" + bitmap.width + "x" + bitmap.height + " " + bitmap.config + "): " + t.message?.lineSequence()?.firstOrNull())
+      }
+      null
+    }
+
+  // The first picture embeds after a model loads can fail while the vision engine settles; absorb that here.
+  private fun warmUp(e: UniversalEmbedder) {
+    val blank = Bitmap.createBitmap(WARMUP_SIDE, WARMUP_SIDE, Bitmap.Config.ARGB_8888)
+    try {
+      for (attempt in 1..WARMUP_TRIES) {
+        if (embedPicture(e, blank, quiet = true) != null) {
+          Log.i(TAG, "picture embedding ready after " + attempt + " tries")
+          return
+        }
+      }
+      Log.w(TAG, "picture embedding did not warm up")
+    } finally {
+      blank.recycle()
+    }
+  }
+
+  private fun retryAfterPause(e: UniversalEmbedder, bitmap: Bitmap): FloatArray? {
+    Thread.sleep(RETRY_PAUSE_MS)
+    val v = embedPicture(e, bitmap, quiet = true)
+    if (v != null) Log.i(TAG, "embedImage worked on a second try (" + bitmap.width + "x" + bitmap.height + ")")
+    return v
+  }
+
+  private fun retrySmaller(e: UniversalEmbedder, bitmap: Bitmap): FloatArray? {
+    val longest = maxOf(bitmap.width, bitmap.height)
+    if (longest <= RETRY_SIDE) return null
+    val scale = RETRY_SIDE.toFloat() / longest
+    val smaller = Bitmap.createScaledBitmap(
+      bitmap,
+      maxOf(1, (bitmap.width * scale).toInt()),
+      maxOf(1, (bitmap.height * scale).toInt()),
+      true
+    )
+    return try {
+      embedPicture(e, smaller)
+    } finally {
+      smaller.recycle()
     }
   }
 
@@ -255,6 +315,7 @@ class LlmHolder {
     // One conversation at a time: a second request waits instead of fighting for the model.
     generateLock.withLock {
       var conv: Conversation? = null
+      val finished = CompletableDeferred<Throwable?>()
       try {
         conv = eng.createConversation(
           ConversationConfig(
@@ -269,14 +330,32 @@ class LlmHolder {
         val started = System.nanoTime()
         var firstAt = 0L
         var pieces = 0
-        conv.sendMessageAsync(Contents.of(*parts.toTypedArray())).collect { m ->
-          val token = messageText(m)
-          if (token.isNotEmpty()) {
-            if (pieces == 0) firstAt = System.nanoTime()
-            pieces++
-            emit("onToken", mapOf("requestId" to requestId, "token" to token))
-          }
+        try {
+          conv.sendMessageAsync(
+            Contents.of(*parts.toTypedArray()),
+            object : MessageCallback {
+              override fun onMessage(message: Message) {
+                val token = messageText(message)
+                if (token.isEmpty()) return
+                if (pieces == 0) firstAt = System.nanoTime()
+                pieces++
+                emit("onToken", mapOf("requestId" to requestId, "token" to token))
+              }
+
+              override fun onDone() {
+                finished.complete(null)
+              }
+
+              override fun onError(throwable: Throwable) {
+                finished.complete(throwable)
+              }
+            }
+          )
+        } catch (t: Throwable) {
+          finished.complete(t)
         }
+        val failure = finished.await()
+        if (failure != null && failure !is CancellationException) throw failure
         Log.i(
           TAG,
           "llm answer: first word after " + ((firstAt - started) / 1_000_000L) + " ms, " + pieces +
@@ -284,16 +363,39 @@ class LlmHolder {
         )
         emit("onGenerateDone", mapOf("requestId" to requestId))
       } catch (e: CancellationException) {
+        stopNative(conv, finished)
         emit("onGenerateDone", mapOf("requestId" to requestId))
         throw e
       } catch (t: Throwable) {
         emit("onGenerateError", mapOf("requestId" to requestId, "error" to (t.message ?: "generate failed")))
       } finally {
-        try {
-          conv?.close()
-        } catch (_: Throwable) {
-        }
+        closeConversation(conv, finished)
       }
+    }
+  }
+
+  private suspend fun stopNative(conv: Conversation?, finished: CompletableDeferred<Throwable?>) {
+    if (conv == null || finished.isCompleted) return
+    withContext(NonCancellable) {
+      try {
+        conv.cancelProcess()
+      } catch (t: Throwable) {
+        Log.w(TAG, "cancelProcess failed: " + t.message)
+      }
+      withTimeoutOrNull(CANCEL_WAIT_MS) { finished.await() }
+    }
+  }
+
+  // Freeing a conversation that is still generating crashes the native runtime, so one that never stopped is leaked.
+  private fun closeConversation(conv: Conversation?, finished: CompletableDeferred<Throwable?>) {
+    if (conv == null) return
+    if (!finished.isCompleted) {
+      Log.w(TAG, "conversation still running, not closing it")
+      return
+    }
+    try {
+      conv.close()
+    } catch (_: Throwable) {
     }
   }
 
@@ -308,17 +410,22 @@ class LlmHolder {
     jobs.remove(requestId)?.cancel()
   }
 
-  private fun closeEngine() {
-    jobs.values.forEach { it.cancel() }
-    jobs.clear()
-    try {
-      engine?.close()
-    } catch (_: Throwable) {
+  private suspend fun closeEngine() {
+    val caller = currentCoroutineContext()[Job]
+    jobs.entries.filter { it.value !== caller }.forEach { (id, job) ->
+      jobs.remove(id)
+      job.cancel()
     }
-    engine = null
-    loadedPath = null
-    backend = "none"
+    generateLock.withLock {
+      try {
+        engine?.close()
+      } catch (_: Throwable) {
+      }
+      engine = null
+      loadedPath = null
+      backend = "none"
+    }
   }
 
-  fun close() = closeEngine()
+  suspend fun close() = closeEngine()
 }

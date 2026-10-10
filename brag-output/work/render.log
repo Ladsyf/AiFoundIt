@@ -1,0 +1,13 @@
+seg0 0/450 1s
+seg1 0/450 1s
+seg2 0/450 1s
+seg3 0/450 1s
+seg1 150/450 18s
+seg3 150/450 19s
+seg2 150/450 20s
+seg0 150/450 21s
+seg3 300/450 33s
+seg1 300/450 35s
+seg0 300/450 37s
+seg2 300/450 37s
+segments done

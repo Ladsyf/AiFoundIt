@@ -1,4 +1,4 @@
-import { KIND_WORDS, MONTHS, STOPWORDS } from '@/lib/search/vocab';
+import { DATE_WORDS, KIND_WORDS, MONTHS, STOPWORDS } from '@/lib/search/vocab';
 
 export function tokenize(query: string): string[] {
   return query
@@ -11,9 +11,7 @@ export function tokenize(query: string): string[] {
 }
 
 export function contentTerms(tokens: string[]): string[] {
-  return tokens.filter(
-    (t) => !STOPWORDS.has(t) && !KIND_WORDS[t] && !MONTHS.includes(t) && t !== 'last' && t !== 'month',
-  );
+  return tokens.filter((t) => !STOPWORDS.has(t) && !KIND_WORDS[t] && !MONTHS.includes(t) && !DATE_WORDS.has(t));
 }
 
 export type DateRange = { from: number; to: number };
